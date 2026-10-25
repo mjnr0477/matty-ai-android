@@ -18,7 +18,7 @@ After microphone permission is enabled, the supported flow is:
 
 1. Say **“Matty, open WhatsApp”** to launch the installed WhatsApp app.
 2. Say **“Matty, open Bluetooth”** to open Android Bluetooth settings, or tap **Find and pair Bluetooth devices** to scan and request pairing with nearby devices.
-3. Matty can open apps and system settings, but does not tap, type into, or scroll other apps in this privacy-focused build.
+3. To operate another app, tap **Enable hands-free controls in other apps**, review the disclosure, accept it, and enable Matty in Android Accessibility settings. Then say direct commands such as **“tap Send”**, **“type Hello there”** (after focusing a text field), **“scroll down”**, **“go back”**, or **“go home.”** These controls are opt-in and some apps or secure screens may block them.
 
 Bluetooth pairing and connections depend on the device, Android permissions, and supported Bluetooth profiles. Generic connection to every Bluetooth device is not possible because many devices require a specific profile or companion app.
 
@@ -58,8 +58,8 @@ The workflow decodes the keystore into the runner's temporary directory and does
 ## Manual device test checklist
 
 1. Install the debug build and open Matty AI.
-2. Tap **Allow Matty to access my phone** and grant microphone and notification permissions.
+2. Tap **Allow microphone access** and grant microphone and notification permissions. Optionally tap **Set Matty as default assistant** and approve the Android role prompt for system invocation.
 3. Test **Type a command** with `open Wi-Fi settings`, then return to Matty and test **Tap to talk**. Only then test the optional background wake phrase.
-4. Tap **Find and pair Bluetooth devices**, grant Nearby devices permission, scan for a powered-on discoverable accessory, and confirm Android's pairing prompt.
-5. Test Bluetooth connection from Android settings for the relevant device profile; test the wake service with screen on/off and inspect battery use.
+4. To enable cross-app commands, tap **Enable hands-free controls in other apps**, read the disclosure, accept, then enable Matty in Android Accessibility settings. Test “tap [visible label]”, “type [exact text]” with a focused field, “scroll down”, “go back”, and “go home”.
+5. Tap **Find and pair Bluetooth devices**, grant Nearby devices permission, scan for a powered-on discoverable accessory, and confirm Android's pairing prompt. Test Bluetooth connection from Android settings for the relevant device profile.
 6. Repeat with Wi-Fi/mobile data disabled and verify speech remains on-device. Record actual outcomes and fix device-specific failures before release. Do not publish as production-ready until these tests pass on target devices.
