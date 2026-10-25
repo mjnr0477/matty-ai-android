@@ -43,6 +43,18 @@ object CommandParser {
                 if (query.isNotBlank()) ParsedMattyCommand(MattyCommandType.SEARCH_WEB, query)
                 else ParsedMattyCommand(MattyCommandType.UNKNOWN)
             }
+            command == "like" || command == "like this" || command == "unlike" ||
+                command == "comment" || command == "share" || command == "share this" ||
+                command == "post" || command == "update status" || command == "open status" ->
+                ParsedMattyCommand(
+                    MattyCommandType.TAP_TEXT,
+                    when (command) {
+                        "like this" -> "Like"
+                        "share this" -> "Share"
+                        "update status", "open status" -> "Status"
+                        else -> original.replaceFirstChar { it.uppercase() }
+                    }
+                )
             command.startsWith("tap ") || command.startsWith("click ") ->
                 ParsedMattyCommand(
                     MattyCommandType.TAP_TEXT,
