@@ -118,7 +118,8 @@ class MattyWakeService : Service() {
             return
         }
         try {
-            val recognizer = Recognizer(model, 16000.0f)
+            val loadedModel = model ?: error("Offline speech model is not loaded.")
+            val recognizer = Recognizer(loadedModel, 16000.0f)
             speechRecognizer = recognizer
             speechService = SpeechService(recognizer, 16000.0f)
             handlingUtterance = false
