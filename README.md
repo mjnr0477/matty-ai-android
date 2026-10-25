@@ -5,18 +5,19 @@ Matty AI is an independent native Android project. It is separate from Dream Edu
 ## Current implementation
 - Refreshed native UI with a guided **Allow Matty to access my phone** setup action.
 - Microphone permission flow and separate Android Accessibility Settings step. Android does not let an app silently grant itself all permissions.
-- Push-to-talk speech recognition. It prefers Android's on-device recognizer when available and requests offline processing.
+- Offline-only wake-phrase service prototype using Android on-device speech recognition, a microphone foreground-service notification, and a wake lock. It refuses to use cloud recognition for the wake phrase.
+- One primary setup button; after Android permissions are approved, Matty attempts to listen for “Matty” and then accept a command after the user unlocks the phone.
 - Local allow-listed commands to open installed apps, Wi-Fi / mobile-data / Bluetooth / general settings, music apps, adjust media volume, and navigate Home / Back / notifications / Quick Settings.
 - Accessibility actions are restricted to explicit global navigation actions. Matty does not collect or transmit screen contents.
 - Deterministic local command parser with unit tests for supported commands and unknown-command safety.
 - GitHub Actions workflow runs parser tests, builds a debug APK, and uploads it as a workflow artifact when successful.
 
 ## Important limitations — not production complete yet
-- Always-on “Matty” wake-word listening is **not implemented yet**. The current UI requires tapping **Speak to Matty**. A proper always-on feature needs a dedicated on-device wake-word engine, a foreground service and notification, battery testing, and clear microphone privacy controls.
+- The wake phrase is now a **prototype, not production-verified**. Android SpeechRecognizer is not a dedicated hotword engine; it may stop, be killed by battery management, consume significant power, fail to bring the activity forward while locked, or require device-specific offline speech support. A production release needs a dedicated offline keyword-spotting engine and physical-device screen-off/battery tests.
 - Android usually does not allow third-party apps to toggle mobile data directly. Matty opens the relevant settings page instead.
 - Specific-song playback depends on the installed music app, its APIs, and track availability. This prototype opens a compatible player; it does not guarantee starting an arbitrary song.
 - Accessibility access is a separate, explicit system opt-in. One button cannot grant all Android permissions.
-- Cloud AI is not wired in yet. Command matching is local; speech recognition works offline only when an on-device recognizer and language pack are available.
+- Cloud AI is intentionally not wired in. Command matching is local; speech recognition works offline only when Android provides an on-device recognizer with the required downloaded language pack. This build deliberately stops the wake service rather than silently falling back to online recognition.
 - This code has not yet been built with a complete Android SDK toolchain or tested end-to-end on a physical phone. Do not treat it as release-ready.
 
 ## Build
@@ -26,6 +27,6 @@ Open the project in Android Studio with Android SDK 35 installed and sync Gradle
 1. Install the debug build and open Matty AI.
 2. Tap **Allow Matty to access my phone** and grant microphone access.
 3. Enable **Matty AI phone control** under Android Settings → Accessibility, then return to Matty.
-4. Tap **Speak to Matty** and test: open WhatsApp, open TikTok, open Wi-Fi, open mobile data, turn volume down, open notifications, go home, go back, play music.
-5. Repeat with Wi-Fi/mobile data disabled. The command parser and settings intents are local; speech recognition only works offline if an on-device recognizer and downloaded language pack are available.
-6. Record actual outcomes and fix device-specific failures before release.
+4. Confirm the ongoing “Matty is ready” notification appears. With the screen on and then screen off, say “Matty”; unlock the phone and test an offline command such as “open Wi-Fi settings”.
+5. Repeat with Wi-Fi/mobile data disabled and verify that the speech service stays on-device. Check Android battery usage, screen-off reliability, and whether the phone manufacturer kills the service.
+6. Record actual outcomes and fix device-specific failures before release. Do not publish as production-ready until these tests pass on target devices.
