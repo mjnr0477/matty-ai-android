@@ -102,8 +102,7 @@ class MainActivity : Activity() {
     }
 
     private fun ensureWakeService() {
-        if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED ||
-            !MattyAccessibilityService.isEnabled(this)) return
+        if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) return
         if (!SpeechRecognizer.isOnDeviceRecognitionAvailable(this)) {
             if (::status.isInitialized) status.text = "This phone has no available on-device speech recognizer. Install an offline speech service and language pack; Matty will not use online speech."
             return
@@ -162,13 +161,22 @@ class MainActivity : Activity() {
             background = rounded(Color.rgb(241, 239, 255), 22)
         }
         accessCard.addView(text("One setup, then you're ready", 17f, ink, true), params(bottom = 6))
-        accessCard.addView(text("Android asks you to approve microphone access and phone-control accessibility separately. These system permissions cannot be granted by one in-app button.", 13f, muted, false), params(bottom = 14))
+        accessCard.addView(text("Android will ask for microphone and nearby Bluetooth permissions when needed. Bluetooth scanning and pairing are optional.", 13f, muted, false), params(bottom = 14))
         accessButton = Button(this).apply {
-            text = "Allow Matty to access my phone"; isAllCaps = false; textSize = 14f; setTextColor(Color.WHITE)
+            text = "Allow microphone access"; isAllCaps = false; textSize = 14f; setTextColor(Color.WHITE)
             background = rounded(ink, 16); setOnClickListener { beginAccessSetup() }
         }
         accessCard.addView(accessButton, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(50)))
-        page.addView(accessCard, params(bottom = 20))
+        page.addView(accessCard, params(bottom = 12))
+
+        val bluetoothButton = Button(this).apply {
+            text = "Find and pair Bluetooth devices"; isAllCaps = false; textSize = 14f
+            setTextColor(Color.WHITE); background = rounded(purple, 16)
+            setOnClickListener { startActivity(Intent(this@MainActivity, BluetoothActivity::class.java)) }
+        }
+        page.addView(bluetoothButton, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(50)).apply {
+            bottomMargin = dp(12)
+        })
 
         page.addView(text("PRIVACY FIRST · Commands are handled on your phone where possible. Offline speech depends on your Android speech service and downloaded language packs.", 11f, muted, false), params(top = 14))
         setContentView(scroll)
@@ -191,29 +199,16 @@ class MainActivity : Activity() {
     }
 
     private fun continueAccessSetup() {
-        if (!MattyAccessibilityService.isEnabled(this)) {
-            status.text = "Enable Matty in Android Accessibility settings, then return here."
-            startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
-        } else {
-            status.text = "Starting offline voice wake. Keep Matty's ongoing notification enabled."
-            refreshAccessState()
-            ensureWakeService()
-        }
+        status.text = "Starting offline voice wake. Keep Matty's ongoing notification enabled."
+        refreshAccessState()
+        ensureWakeService()
     }
 
     private fun refreshAccessState() {
         val mic = checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
-        val accessibility = MattyAccessibilityService.isEnabled(this)
-        accessButton.text = when {
-            !mic -> "Allow Matty to access my phone"
-            !accessibility -> "Finish setup: enable phone control"
-            else -> "Phone access enabled ✓"
-        }
-        status.text = when {
-            !mic -> "Microphone permission is needed for voice commands."
-            !accessibility -> "Microphone ready. Enable Matty's Accessibility Service for supported phone navigation."
-            else -> "Matty is ready for supported voice commands. Say “Matty” to begin."
-        }
+        accessButton.text = if (!mic) "Allow microphone access" else "Voice access enabled ✓"
+        status.text = if (!mic) "Microphone permission is needed for voice commands."
+            else "Matty is ready for supported voice commands. Say “Matty” to begin."
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
@@ -278,10 +273,9 @@ class MainActivity : Activity() {
             MattyCommandType.OPEN_MOBILE_DATA_SETTINGS -> openSettings(Settings.ACTION_DATA_USAGE_SETTINGS, "Opening mobile data settings. Android controls whether data can be switched directly.")
             MattyCommandType.OPEN_BLUETOOTH_SETTINGS -> openSettings(Settings.ACTION_BLUETOOTH_SETTINGS, "Opening Bluetooth settings.")
             MattyCommandType.OPEN_NETWORK_SETTINGS -> openSettings(Settings.ACTION_WIRELESS_SETTINGS, "Opening network settings.")
-            MattyCommandType.OPEN_NOTIFICATIONS -> globalAction(AccessibilityServiceAction.NOTIFICATIONS, "Opening notifications.")
-            MattyCommandType.OPEN_QUICK_SETTINGS -> globalAction(AccessibilityServiceAction.QUICK_SETTINGS, "Opening quick settings.")
-            MattyCommandType.GO_BACK -> globalAction(AccessibilityServiceAction.BACK, "Going back.")
-            MattyCommandType.GO_HOME -> globalAction(AccessibilityServiceAction.HOME, "Going home.")
+            MattyCommandType.OPEN_NOTIFICATIONS -> openSettings(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS, "Opening notification access settings.")
+            MattyCommandType.OPEN_QUICK_SETTINGS -> openSettings(Settings.ACTION_SETTINGS, "Open Quick Settings using your phone's notification shade.")
+            MattyCommandType.GO_BACK, MattyCommandType.GO_HOME -> status.text = "Use your phone's Back or Home controls; Matty does not control other apps in this build."
             MattyCommandType.VOLUME_DOWN -> adjustVolume(false)
             MattyCommandType.VOLUME_UP -> adjustVolume(true)
             MattyCommandType.START_PLAYBACK -> startPlayback()
@@ -289,73 +283,18 @@ class MainActivity : Activity() {
             MattyCommandType.OPEN_APP -> openApp(parsed.argument)
             MattyCommandType.INSTALL_APP -> openStoreSearch(parsed.argument)
             MattyCommandType.SEARCH_WEB -> searchWeb(parsed.argument)
-            MattyCommandType.OPEN_APP_AND_CLICK_LINK -> openAppThenClickLink(parsed.argument)
-            MattyCommandType.CLICK_FIRST_LINK -> performOnUnderlyingApp(
-                success = "Opened the first visible link.",
-                failure = "Couldn't find a visible link on the current screen.",
-                action = { it.clickFirstLink() }
-            )
-            MattyCommandType.TAP_TEXT -> performOnUnderlyingApp(
-                success = "Tapped “${parsed.argument}”.",
-                failure = "Couldn't find a tappable control labelled “${parsed.argument}”.",
-                action = { it.clickText(parsed.argument) }
-            )
-            MattyCommandType.TYPE_TEXT -> performOnUnderlyingApp(
-                success = "Entered text in the focused field.",
-                failure = "Couldn't find a focused editable field. Focus a text field first.",
-                action = { it.enterText(parsed.argument) }
-            )
-            MattyCommandType.SCROLL_UP -> performOnUnderlyingApp(
-                success = "Scrolled up.", failure = "Couldn't scroll this screen.",
-                action = { it.doAction(AccessibilityServiceAction.SCROLL_UP) }
-            )
-            MattyCommandType.SCROLL_DOWN -> performOnUnderlyingApp(
-                success = "Scrolled down.", failure = "Couldn't scroll this screen.",
-                action = { it.doAction(AccessibilityServiceAction.SCROLL_DOWN) }
-            )
+            MattyCommandType.OPEN_APP_AND_CLICK_LINK -> openApp(parsed.argument)
+            MattyCommandType.CLICK_FIRST_LINK, MattyCommandType.TAP_TEXT, MattyCommandType.TYPE_TEXT,
+            MattyCommandType.SCROLL_UP, MattyCommandType.SCROLL_DOWN ->
+                status.text = "Cross-app tapping, typing, and scrolling are not enabled in this privacy-focused build."
             MattyCommandType.UNKNOWN -> status.text = "I heard you, but that action is not supported yet."
         }
-        if (parsed.type !in setOf(
-                MattyCommandType.TAP_TEXT, MattyCommandType.CLICK_FIRST_LINK,
-                MattyCommandType.TYPE_TEXT, MattyCommandType.SCROLL_UP, MattyCommandType.SCROLL_DOWN
-            )) ensureWakeService()
-    }
-
-    /**
-     * Matty is in the foreground while it hears the command. Return to the app underneath
-     * before asking Accessibility to tap/type/scroll, otherwise Matty would inspect its own UI.
-     */
-    private fun performOnUnderlyingApp(
-        success: String,
-        failure: String,
-        action: (MattyAccessibilityService) -> Boolean
-    ) {
-        val service = MattyAccessibilityService.instance
-        if (service == null) {
-            status.text = "Enable Matty's Accessibility Service first."
-            return
-        }
-        val appContext = applicationContext
-        // Release the one-shot recognizer before starting the background wake recognizer.
-        try { recognizer?.cancel(); recognizer?.destroy() } catch (_: Exception) { }
-        recognizer = null
         ensureWakeService()
-        finish()
-        Handler(Looper.getMainLooper()).postDelayed({
-            val completed = try { action(service) } catch (_: Exception) { false }
-            Toast.makeText(appContext, if (completed) success else failure, Toast.LENGTH_SHORT).show()
-        }, 450L)
     }
 
     private fun openSettings(action: String, message: String) {
         try { startActivity(Intent(action)); status.text = message }
         catch (_: Exception) { status.text = "Android couldn't open that settings page on this device." }
-    }
-
-    private fun globalAction(action: AccessibilityServiceAction, message: String) {
-        val service = MattyAccessibilityService.instance
-        if (service == null) { status.text = "Enable Matty's Accessibility Service first to use this phone navigation command."; return }
-        status.text = if (service.doAction(action)) message else "Android did not allow that navigation action."
     }
 
     private fun adjustVolume(up: Boolean) {
@@ -438,30 +377,6 @@ class MainActivity : Activity() {
             status.text = "Searching the web for: $cleaned"
         } catch (_: Exception) {
             status.text = "No browser or search app is available. Web search needs an internet connection."
-        }
-    }
-
-    private fun openAppThenClickLink(name: String) {
-        val cleaned = name.removePrefix("the ").replace(Regex("\\s+"), " ").trim()
-        val intent = findLaunchIntent(listOf(cleaned))
-        if (intent == null) {
-            status.text = "I couldn't find an installed app matching ‘$cleaned’."
-            return
-        }
-        try {
-            startActivity(intent)
-            status.text = "Opening $cleaned, then looking for its first visible link."
-            val service = MattyAccessibilityService.instance
-            Handler(Looper.getMainLooper()).postDelayed({
-                val completed = try { service?.clickFirstLink() == true } catch (_: Exception) { false }
-                Toast.makeText(
-                    applicationContext,
-                    if (completed) "Opened the first visible link." else "App opened, but no accessible link was found. Try “Matty, click the link” after the screen finishes loading.",
-                    Toast.LENGTH_LONG
-                ).show()
-            }, 1800L)
-        } catch (_: Exception) {
-            status.text = "Android couldn't launch $cleaned."
         }
     }
 

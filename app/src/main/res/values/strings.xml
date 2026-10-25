@@ -1,4 +1,3 @@
 <resources>
     <string name="app_name">Matty AI</string>
-    <string name="accessibility_description">Lets Matty carry out voice commands you explicitly request, including tapping visible controls by label, entering text in an editable field, scrolling, and basic phone navigation. Screen nodes are inspected in memory for the requested action and are not saved or sent over the network. Enable only if you understand and want this capability.</string>
 </resources>

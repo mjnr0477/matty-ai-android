@@ -4,6 +4,9 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" android:usesPermissionFlags="neverForLocation" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-feature android:name="android.hardware.bluetooth" android:required="false" />
     <queries>
         <intent>
             <action android:name="android.speech.RecognitionService" />
@@ -41,13 +44,6 @@
             android:label="Matty offline voice wake"
             android:exported="false"
             android:foregroundServiceType="microphone" />
-        <service
-            android:name=".MattyAccessibilityService"
-            android:label="Matty AI phone control"
-            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
-            android:exported="true">
-            <intent-filter><action android:name="android.accessibilityservice.AccessibilityService" /></intent-filter>
-            <meta-data android:name="android.accessibilityservice" android:resource="@xml/matty_accessibility_service" />
-        </service>
+        <activity android:name=".BluetoothActivity" android:exported="false" android:label="Nearby Bluetooth devices" />
     </application>
 </manifest>
