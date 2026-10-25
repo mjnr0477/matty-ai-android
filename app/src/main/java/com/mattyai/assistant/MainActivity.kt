@@ -10,6 +10,8 @@ import android.graphics.drawable.GradientDrawable
 import android.media.AudioManager
 import android.view.KeyEvent
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.os.Bundle
 import android.provider.Settings
 import android.app.KeyguardManager
@@ -24,6 +26,7 @@ import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
+import android.widget.Toast
 import java.util.Locale
 
 class MainActivity : Activity() {
@@ -263,27 +266,49 @@ class MainActivity : Activity() {
             MattyCommandType.START_PLAYBACK -> startPlayback()
             MattyCommandType.OPEN_MUSIC -> openMusic()
             MattyCommandType.OPEN_APP -> openApp(parsed.argument)
-            MattyCommandType.TAP_TEXT -> {
-                val service = MattyAccessibilityService.instance
-                status.text = when {
-                    service == null -> "Enable Matty's Accessibility Service first."
-                    service.clickText(parsed.argument) -> "Tapped “${parsed.argument}”."
-                    else -> "Couldn't find a tappable control labelled “${parsed.argument}” on this screen."
-                }
-            }
-            MattyCommandType.TYPE_TEXT -> {
-                val service = MattyAccessibilityService.instance
-                status.text = when {
-                    service == null -> "Enable Matty's Accessibility Service first."
-                    service.enterText(parsed.argument) -> "Entered the requested text in the focused text field."
-                    else -> "Couldn't find an editable text field. Tap a field first, then ask Matty to type."
-                }
-            }
-            MattyCommandType.SCROLL_UP -> globalAction(AccessibilityServiceAction.SCROLL_UP, "Scrolled up.")
-            MattyCommandType.SCROLL_DOWN -> globalAction(AccessibilityServiceAction.SCROLL_DOWN, "Scrolled down.")
+            MattyCommandType.TAP_TEXT -> performOnUnderlyingApp(
+                success = "Tapped “${parsed.argument}”.",
+                failure = "Couldn't find a tappable control labelled “${parsed.argument}”.",
+                action = { it.clickText(parsed.argument) }
+            )
+            MattyCommandType.TYPE_TEXT -> performOnUnderlyingApp(
+                success = "Entered text in the focused field.",
+                failure = "Couldn't find a focused editable field. Focus a text field first.",
+                action = { it.enterText(parsed.argument) }
+            )
+            MattyCommandType.SCROLL_UP -> performOnUnderlyingApp(
+                success = "Scrolled up.", failure = "Couldn't scroll this screen.",
+                action = { it.doAction(AccessibilityServiceAction.SCROLL_UP) }
+            )
+            MattyCommandType.SCROLL_DOWN -> performOnUnderlyingApp(
+                success = "Scrolled down.", failure = "Couldn't scroll this screen.",
+                action = { it.doAction(AccessibilityServiceAction.SCROLL_DOWN) }
+            )
             MattyCommandType.UNKNOWN -> status.text = "I heard you, but that action is not supported yet."
         }
         ensureWakeService()
+    }
+
+    /**
+     * Matty is in the foreground while it hears the command. Return to the app underneath
+     * before asking Accessibility to tap/type/scroll, otherwise Matty would inspect its own UI.
+     */
+    private fun performOnUnderlyingApp(
+        success: String,
+        failure: String,
+        action: (MattyAccessibilityService) -> Boolean
+    ) {
+        val service = MattyAccessibilityService.instance
+        if (service == null) {
+            status.text = "Enable Matty's Accessibility Service first."
+            return
+        }
+        val appContext = applicationContext
+        finish()
+        Handler(Looper.getMainLooper()).postDelayed({
+            val completed = try { action(service) } catch (_: Exception) { false }
+            Toast.makeText(appContext, if (completed) success else failure, Toast.LENGTH_SHORT).show()
+        }, 450L)
     }
 
     private fun openSettings(action: String, message: String) {
