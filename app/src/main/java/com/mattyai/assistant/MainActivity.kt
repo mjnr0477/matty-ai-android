@@ -8,6 +8,7 @@ import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.media.AudioManager
+import android.view.KeyEvent
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
@@ -211,7 +212,8 @@ class MainActivity : Activity() {
             command.contains("go home") || command == "home" -> globalAction(AccessibilityServiceAction.HOME, "Going home.")
             command.contains("volume down") || command.contains("turn down volume") || command.contains("lower volume") -> adjustVolume(false)
             command.contains("volume up") || command.contains("turn up volume") || command.contains("raise volume") -> adjustVolume(true)
-            command.contains("play music") || command.contains("start music") || command.contains("start this song") || command == "start song" || command.startsWith("play ") || command.contains("open music") -> openMusic()
+            command.contains("start this song") || command == "start song" -> startPlayback()
+            command.contains("play music") || command.contains("start music") || command.startsWith("play ") || command.contains("open music") -> openMusic()
             command.startsWith("open ") || command.startsWith("launch ") || command.startsWith("start ") -> openApp(command.substringAfter(' ').trim())
             else -> status.text = "I heard you, but don't have a safe action for that command yet. Try one of the examples below."
         }
@@ -234,6 +236,18 @@ class MainActivity : Activity() {
             audio.adjustStreamVolume(AudioManager.STREAM_MUSIC, if (up) AudioManager.ADJUST_RAISE else AudioManager.ADJUST_LOWER, AudioManager.FLAG_SHOW_UI)
             status.text = if (up) "Music volume increased." else "Music volume decreased."
         } catch (_: Exception) { status.text = "Couldn't adjust media volume." }
+    }
+
+    private fun startPlayback() {
+        try {
+            val audio = getSystemService(AUDIO_SERVICE) as AudioManager
+            audio.dispatchMediaKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_MEDIA_PLAY))
+            audio.dispatchMediaKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_MEDIA_PLAY))
+            status.text = "Sent Play to the active media session. If nothing is playing, open a music app and choose a track first."
+        } catch (_: Exception) {
+            status.text = "Could not control active media. Opening a compatible music app instead."
+            openMusic()
+        }
     }
 
     private fun openMusic() {
