@@ -24,8 +24,11 @@ object CommandParser {
                     .find(command, appStart)
                 val appName = (separator?.let { command.substring(appStart, it.range.first) }
                     ?: command.substring(appStart)).trim()
-                if (appName.isNotEmpty()) ParsedMattyCommand(MattyCommandType.OPEN_APP_AND_CLICK_LINK, appName)
-                else ParsedMattyCommand(MattyCommandType.CLICK_FIRST_LINK)
+                if (appName.isNotEmpty() && !appName.matches(Regex("(?i)(the|this|that)?\\s*link"))) {
+                    ParsedMattyCommand(MattyCommandType.OPEN_APP_AND_CLICK_LINK, appName)
+                } else {
+                    ParsedMattyCommand(MattyCommandType.CLICK_FIRST_LINK)
+                }
             }
             command.contains("link") && (command.contains("click") || command.contains("open") || command.contains("follow")) ->
                 ParsedMattyCommand(MattyCommandType.CLICK_FIRST_LINK)
