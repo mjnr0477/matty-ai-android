@@ -251,6 +251,9 @@ class MainActivity : Activity() {
             override fun onError(error: Int) { status.text = "Didn't catch that. Check speech service / offline language pack and try again." }
             override fun onResults(results: Bundle?) {
                 val phrase = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull().orEmpty()
+                // End this one-shot recognizer before a command starts the persistent wake service.
+                try { recognizer?.destroy() } catch (_: Exception) { }
+                recognizer = null
                 handleCommand(phrase)
             }
             override fun onPartialResults(partialResults: Bundle?) {}
@@ -282,6 +285,7 @@ class MainActivity : Activity() {
             MattyCommandType.START_PLAYBACK -> startPlayback()
             MattyCommandType.OPEN_MUSIC -> openMusic()
             MattyCommandType.OPEN_APP -> openApp(parsed.argument)
+            MattyCommandType.OPEN_APP_AND_CLICK_LINK -> openAppThenClickLink(parsed.argument)
             MattyCommandType.CLICK_FIRST_LINK -> performOnUnderlyingApp(
                 success = "Opened the first visible link.",
                 failure = "Couldn't find a visible link on the current screen.",
@@ -383,6 +387,30 @@ class MainActivity : Activity() {
         val likely = findLaunchIntent(listOf("Spotify", "YouTube Music", "Music", "YouTube", "VLC"))
         if (likely != null) try { startActivity(likely); status.text = "Opened a music app. Choose a track there."; return } catch (_: Exception) { }
         status.text = "No compatible music app was found. Install a music player and try again."
+    }
+
+    private fun openAppThenClickLink(name: String) {
+        val cleaned = name.removePrefix("the ").replace(Regex("\\s+"), " ").trim()
+        val intent = findLaunchIntent(listOf(cleaned))
+        if (intent == null) {
+            status.text = "I couldn't find an installed app matching ‘$cleaned’."
+            return
+        }
+        try {
+            startActivity(intent)
+            status.text = "Opening $cleaned, then looking for its first visible link."
+            val service = MattyAccessibilityService.instance
+            Handler(Looper.getMainLooper()).postDelayed({
+                val completed = try { service?.clickFirstLink() == true } catch (_: Exception) { false }
+                Toast.makeText(
+                    applicationContext,
+                    if (completed) "Opened the first visible link." else "App opened, but no accessible link was found. Try “Matty, click the link” after the screen finishes loading.",
+                    Toast.LENGTH_LONG
+                ).show()
+            }, 1800L)
+        } catch (_: Exception) {
+            status.text = "Android couldn't launch $cleaned."
+        }
     }
 
     private fun openApp(name: String) {
