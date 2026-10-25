@@ -299,7 +299,7 @@ class MainActivity : Activity() {
         AlertDialog.Builder(this)
             .setTitle("Enable hands-free control in other apps?")
             .setMessage(
-                "Matty can use Android Accessibility to match a visible label you explicitly name, enter the exact text you dictate into a focused text field, scroll, and use Back or Home. It does not make its own decisions about what to tap, and this feature does not upload screen content. Some secure screens and apps may block control. Android will show its own warning because this permission can operate the screen. You can disable Matty at any time in Accessibility settings."
+                "Matty can use Android Accessibility to tap or long-press a visible label you name, enter the exact text you dictate into a focused field, scroll or swipe, open notifications and Quick Settings, and use Back or Home. It does not make its own decisions about what to tap, and this feature does not upload screen content. Some secure screens and apps may block control. Android will show its own warning because this permission can operate the screen. You can disable Matty at any time in Accessibility settings."
             )
             .setNegativeButton("Not now", null)
             .setPositiveButton("I understand — continue") { _, _ ->
@@ -484,7 +484,10 @@ class MainActivity : Activity() {
             MattyCommandType.OPEN_APP -> openApp(parsed.argument)
             MattyCommandType.INSTALL_APP -> openStoreSearch(parsed.argument)
             MattyCommandType.SEARCH_WEB -> searchWeb(parsed.argument)
-            MattyCommandType.OPEN_APP_AND_CLICK_LINK -> openApp(parsed.argument)
+            MattyCommandType.OPEN_APP_AND_CLICK_LINK -> {
+                openApp(parsed.argument)
+                status.text = "Opened ${parsed.argument}. To avoid tapping the wrong link, say “Matty, tap” followed by the exact visible link label."
+            }
             MattyCommandType.TAP_TEXT -> runCrossAppAction { MattyAccessibilityService.tapVisibleLabel(parsed.argument) }
             MattyCommandType.LONG_PRESS_TEXT -> runCrossAppAction { MattyAccessibilityService.longPressVisibleLabel(parsed.argument) }
             MattyCommandType.TYPE_TEXT -> runCrossAppAction { MattyAccessibilityService.typeIntoFocusedField(parsed.argument) }
