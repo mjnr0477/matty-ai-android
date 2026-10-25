@@ -16,6 +16,7 @@ import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.speech.tts.TextToSpeech
+import android.speech.tts.UtteranceProgressListener
 import java.util.Locale
 
 /**
@@ -32,6 +33,8 @@ class MattyWakeService : Service() {
     private var mode = ListenMode.WAKE_PHRASE
     private var tts: TextToSpeech? = null
     private var ttsReady = false
+    private var resumeAfterSpeech = false
+    private var speechGeneration = 0
     private val handler = Handler(Looper.getMainLooper())
     private val retryListening = Runnable { startListening() }
 
@@ -49,13 +52,29 @@ class MattyWakeService : Service() {
         }
         tts = TextToSpeech(applicationContext) { result ->
             ttsReady = result == TextToSpeech.SUCCESS
-            if (ttsReady) tts?.language = Locale.getDefault()
+            if (ttsReady) {
+                tts?.language = Locale.getDefault()
+                tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+                    override fun onStart(utteranceId: String?) = Unit
+                    override fun onDone(utteranceId: String?) {
+                        handler.post { finishSpeechAndResume() }
+                    }
+                    @Deprecated("Deprecated by Android")
+                    override fun onError(utteranceId: String?) {
+                        handler.post { finishSpeechAndResume() }
+                    }
+                    override fun onError(utteranceId: String?, errorCode: Int) {
+                        handler.post { finishSpeechAndResume() }
+                    }
+                })
+            }
         }
         startListening()
     }
 
     private fun startListening() {
         if (listening) return
+        handler.removeCallbacks(retryListening)
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || !SpeechRecognizer.isOnDeviceRecognitionAvailable(this)) {
             updateNotification("Offline speech unavailable. Install an on-device speech service and language pack.")
             stopSelf()
@@ -84,8 +103,7 @@ class MattyWakeService : Service() {
                         if (Regex("(?i).*\\bmatty\\b.*").matches(heard)) {
                             mode = ListenMode.COMMAND
                             updateNotification("Matty heard you. Say a command now.")
-                            speak("I'm listening. What should I do?")
-                            handler.postDelayed(retryListening, 700L)
+                            speakThenResume("I'm listening. What should I do?")
                         } else {
                             handler.postDelayed(retryListening, 350L)
                         }
@@ -93,10 +111,12 @@ class MattyWakeService : Service() {
                         mode = ListenMode.WAKE_PHRASE
                         if (heard.isBlank()) {
                             updateNotification("Didn't catch that. Listening for “Matty” again.")
+                            handler.postDelayed(retryListening, 500L)
                         } else {
-                            executeSupportedBackgroundCommand(heard)
+                            val response = executeSupportedBackgroundCommand(heard)
+                            updateNotification(response)
+                            speakThenResume(response)
                         }
-                        handler.postDelayed(retryListening, 900L)
                     }
                 }
                 override fun onPartialResults(partialResults: Bundle?) {}
@@ -117,45 +137,59 @@ class MattyWakeService : Service() {
         }
     }
 
-    private fun executeSupportedBackgroundCommand(raw: String) {
+    private fun executeSupportedBackgroundCommand(raw: String): String {
         val command = CommandParser.parse(raw)
         val audio = getSystemService(AUDIO_SERVICE) as AudioManager
-        when (command.type) {
+        return when (command.type) {
             MattyCommandType.VOLUME_UP -> {
                 audio.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_RAISE, 0)
-                confirm("Media volume increased.")
+                "Media volume increased."
             }
             MattyCommandType.VOLUME_DOWN -> {
                 audio.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_LOWER, 0)
-                confirm("Media volume decreased.")
+                "Media volume decreased."
             }
             MattyCommandType.START_PLAYBACK -> {
                 audio.dispatchMediaKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, android.view.KeyEvent.KEYCODE_MEDIA_PLAY))
                 audio.dispatchMediaKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_UP, android.view.KeyEvent.KEYCODE_MEDIA_PLAY))
-                confirm("Sent play to the active media session.")
+                "Sent play to the active media session."
             }
-            else -> {
-                val message = "Heard: $raw. This action needs Matty open and may require unlocking your phone."
-                updateNotification(message)
-                speak("I heard you. Please open Matty and unlock your phone to run that action.")
-            }
+            else -> "I heard you say $raw. That action needs Matty open and may require unlocking your phone."
         }
     }
 
-    private fun confirm(message: String) {
-        updateNotification(message)
-        speak(message)
+    /**
+     * Do not restart speech recognition while Matty is speaking: otherwise the
+     * recognizer can hear its own reply and mistake it for the next command.
+     * A timeout is retained because some Android TTS engines omit completion callbacks.
+     */
+    private fun speakThenResume(message: String) {
+        handler.removeCallbacks(retryListening)
+        listening = false
+        val generation = ++speechGeneration
+        resumeAfterSpeech = true
+        val queued = try {
+            if (ttsReady) {
+                val result = if (Build.VERSION.SDK_INT >= 21) {
+                    tts?.speak(message, TextToSpeech.QUEUE_FLUSH, null, "matty-result-$generation")
+                } else {
+                    @Suppress("DEPRECATION")
+                    tts?.speak(message, TextToSpeech.QUEUE_FLUSH, null)
+                }
+                result == TextToSpeech.SUCCESS
+            } else false
+        } catch (_: Exception) { false }
+
+        handler.postDelayed({
+            if (resumeAfterSpeech && generation == speechGeneration) finishSpeechAndResume()
+        }, if (queued) 8_000L else 700L)
     }
 
-    private fun speak(message: String) {
-        if (ttsReady) {
-            if (Build.VERSION.SDK_INT >= 21) {
-                tts?.speak(message, TextToSpeech.QUEUE_FLUSH, null, "matty-result")
-            } else {
-                @Suppress("DEPRECATION")
-                tts?.speak(message, TextToSpeech.QUEUE_FLUSH, null)
-            }
-        }
+    private fun finishSpeechAndResume() {
+        if (!resumeAfterSpeech) return
+        resumeAfterSpeech = false
+        handler.removeCallbacks(retryListening)
+        handler.postDelayed(retryListening, 250L)
     }
 
     private fun createNotificationChannel() {
@@ -191,6 +225,7 @@ class MattyWakeService : Service() {
 
     override fun onDestroy() {
         listening = false
+        resumeAfterSpeech = false
         handler.removeCallbacksAndMessages(null)
         try { recognizer?.cancel(); recognizer?.destroy() } catch (_: Exception) {}
         recognizer = null
