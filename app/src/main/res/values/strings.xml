@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Matty AI</string>
+    <string name="accessibility_description">Allows Matty AI to perform user-requested phone navigation actions such as Home, Back, notifications and Quick Settings. Enable only if you understand and want this capability.</string>
+</resources>
