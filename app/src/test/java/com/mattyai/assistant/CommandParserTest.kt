@@ -34,6 +34,26 @@ class CommandParserTest {
             CommandParser.parse("there's a link there, click to open the link").type
         )
     }
+    @Test fun parsesInstallAppRequests() {
+        assertEquals(
+            ParsedMattyCommand(MattyCommandType.INSTALL_APP, "WhatsApp"),
+            CommandParser.parse("Matty install WhatsApp")
+        )
+        assertEquals(
+            ParsedMattyCommand(MattyCommandType.INSTALL_APP, "Signal"),
+            CommandParser.parse("download and install Signal")
+        )
+    }
+    @Test fun parsesWebSearchRequests() {
+        assertEquals(
+            ParsedMattyCommand(MattyCommandType.SEARCH_WEB, "weather in Bungoma"),
+            CommandParser.parse("Matty search for weather in Bungoma")
+        )
+        assertEquals(
+            ParsedMattyCommand(MattyCommandType.SEARCH_WEB, "nearby pharmacies"),
+            CommandParser.parse("look up nearby pharmacies")
+        )
+    }
     @Test fun parsesCompoundOpenAppThenClickLink() {
         assertEquals(
             ParsedMattyCommand(MattyCommandType.OPEN_APP_AND_CLICK_LINK, "whatsapp"),
