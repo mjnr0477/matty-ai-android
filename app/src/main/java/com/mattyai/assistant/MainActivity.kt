@@ -474,7 +474,8 @@ class MainActivity : Activity() {
             MattyCommandType.OPEN_BLUETOOTH_SETTINGS -> openSettings(Settings.ACTION_BLUETOOTH_SETTINGS, "Opening Bluetooth settings.")
             MattyCommandType.OPEN_NETWORK_SETTINGS -> openSettings(Settings.ACTION_WIRELESS_SETTINGS, "Opening network settings.")
             MattyCommandType.OPEN_NOTIFICATIONS -> openSettings(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS, "Opening notification access settings.")
-            MattyCommandType.OPEN_QUICK_SETTINGS -> openSettings(Settings.ACTION_SETTINGS, "Open Quick Settings using your phone's notification shade.")
+            MattyCommandType.OPEN_QUICK_SETTINGS -> runCrossAppAction { MattyAccessibilityService.openQuickSettings() }
+            MattyCommandType.OPEN_NOTIFICATIONS -> runCrossAppAction { MattyAccessibilityService.openNotifications() }
             MattyCommandType.GO_BACK -> runCrossAppAction { MattyAccessibilityService.goBack() }
             MattyCommandType.GO_HOME -> runCrossAppAction { MattyAccessibilityService.goHome() }
             MattyCommandType.VOLUME_DOWN -> adjustVolume(false)
@@ -486,6 +487,7 @@ class MainActivity : Activity() {
             MattyCommandType.SEARCH_WEB -> searchWeb(parsed.argument)
             MattyCommandType.OPEN_APP_AND_CLICK_LINK -> openApp(parsed.argument)
             MattyCommandType.TAP_TEXT -> runCrossAppAction { MattyAccessibilityService.tapVisibleLabel(parsed.argument) }
+            MattyCommandType.LONG_PRESS_TEXT -> runCrossAppAction { MattyAccessibilityService.longPressVisibleLabel(parsed.argument) }
             MattyCommandType.TYPE_TEXT -> runCrossAppAction { MattyAccessibilityService.typeIntoFocusedField(parsed.argument) }
             MattyCommandType.SCROLL_UP -> runCrossAppAction { MattyAccessibilityService.scroll(false) }
             MattyCommandType.SCROLL_DOWN -> runCrossAppAction { MattyAccessibilityService.scroll(true) }
