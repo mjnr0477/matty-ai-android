@@ -49,6 +49,12 @@ class MainActivity : Activity() {
         startCommandAfterUnlockIfPossible()
     }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        startCommandAfterUnlockIfPossible()
+    }
+
     override fun onResume() {
         super.onResume()
         if (::accessButton.isInitialized) {
