@@ -28,6 +28,10 @@ class CommandParserTest {
     @Test fun parsesGenericLinkClick() {
         assertEquals(MattyCommandType.CLICK_FIRST_LINK, CommandParser.parse("Matty click the link").type)
         assertEquals(MattyCommandType.CLICK_FIRST_LINK, CommandParser.parse("open this link").type)
+        assertEquals(
+            MattyCommandType.CLICK_FIRST_LINK,
+            CommandParser.parse("there's a link there, click to open the link").type
+        )
     }
     @Test fun parsesTextEntryLocally() {
         assertEquals(ParsedMattyCommand(MattyCommandType.TYPE_TEXT, "Hello There!"), CommandParser.parse("Matty type Hello There!"))
