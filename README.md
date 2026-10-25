@@ -26,13 +26,13 @@ Bluetooth pairing and connections depend on the device, Android permissions, and
 
 - Refreshed native UI with guided microphone setup, a default-assistant role setup button, and a dedicated nearby Bluetooth device screen.
 - Bluetooth discovery, paired-device listing, user-approved pairing requests, and a shortcut to Android Bluetooth settings for profile-specific connections.
-- No Accessibility Service is declared in the release manifest. This removes a sensitive sideloading permission that can trigger Play Protect blocks for internet-downloaded apps; it cannot guarantee Google's classifier will never warn about the APK.
+- Optional Accessibility Service for explicit, deterministic commands only: tap a specifically named visible label, enter user-dictated text into a focused field, scroll, Back, and Home. The app shows a prominent disclosure and requires affirmative consent before directing users to Android Accessibility settings. Matty does not autonomously plan actions or upload screen content. The service can still trigger Android security warnings; Play Console requires the applicable Accessibility API declaration and review.
 - Offline-only wake-phrase service prototype using Android on-device speech recognition, a microphone foreground-service notification, and a short screen-wake attempt. It waits for Matty's spoken reply to finish before resuming recognition to reduce self-triggering; this behavior still needs physical-device testing. It refuses to use cloud recognition for speech.
 - Primary controls now include **Tap to talk** (manual one-shot speech recognition) and **Type a command** (reliable fallback if wake-word detection or speech recognition is unavailable). The optional background “Matty” wake phrase remains experimental and depends on Android's on-device speech service.
-- Local commands to open installed apps and Wi-Fi / mobile-data / Bluetooth / general settings, adjust media volume, open music apps, and start a web search. Cross-app tapping, typing, and scrolling are not supported.
+- Local commands to open installed apps and Wi-Fi / mobile-data / Bluetooth / general settings, adjust media volume, open music apps, start web searches, and—when the user explicitly enables Accessibility—tap named visible controls, enter exact dictated text into a focused field, scroll, and use Back/Home.
 - **“Install [app]”** opens an app-store search for the requested app. The user reviews the result and confirms installation in Google Play or another system store; Matty does not bypass Android installation confirmations or automatically grant a newly installed app's permissions.
 - **“Search for [query]”** opens a browser web search. This specific action requires an internet connection; core command parsing remains local.
-- Cross-app tapping, text-entry, and scrolling are intentionally disabled in this build. Matty does not request Accessibility access or inspect other apps' screens.
+- Cross-app interaction is opt-in and limited to direct spoken commands. It cannot reliably control secure system screens, custom app controls, every web view, or apps that block accessibility actions; the user must review any action that sends or publishes information.
 - Deterministic local command parser with unit tests for supported commands and unknown-command safety.
 
 ## Release signing secrets
