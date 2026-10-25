@@ -108,14 +108,14 @@ val releaseSigningConfigured = !releaseStorePath.isNullOrBlank() &&
 android {
     sourceSets.getByName("main").assets.srcDir(offlineSpeechAssetsDir)
     namespace = "com.mattyai.assistant"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.mattyai.assistant"
         minSdk = 31
-        targetSdk = 35
-        versionCode = 4
-        versionName = "0.4.0"
+        targetSdk = 36
+        versionCode = 5
+        versionName = "0.4.1"
     }
 
     signingConfigs {
