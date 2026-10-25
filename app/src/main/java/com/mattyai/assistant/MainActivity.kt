@@ -197,6 +197,18 @@ class MainActivity : Activity() {
             bottomMargin = dp(10)
         })
 
+        val crossAppButton = Button(this).apply {
+            text = "Enable hands-free controls in other apps"
+            isAllCaps = false
+            textSize = 14f
+            setTextColor(ink)
+            background = rounded(Color.rgb(236, 237, 246), 16)
+            setOnClickListener { requestCrossAppVoiceControl() }
+        }
+        page.addView(crossAppButton, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(50)).apply {
+            bottomMargin = dp(10)
+        })
+
         val bluetoothButton = Button(this).apply {
             text = "Find and pair Bluetooth devices"; isAllCaps = false; textSize = 14f
             setTextColor(Color.WHITE); background = rounded(purple, 16)
@@ -260,6 +272,36 @@ class MainActivity : Activity() {
             status.text = if (held) "Matty is selected. Android controls how the assistant is invoked on this phone."
                 else "Matty was not selected as the default assistant."
         }
+    }
+
+
+    private fun requestCrossAppVoiceControl() {
+        AlertDialog.Builder(this)
+            .setTitle("Enable hands-free control in other apps?")
+            .setMessage(
+                "Matty can use Android Accessibility to match a visible label you explicitly name, enter the exact text you dictate into a focused text field, scroll, and use Back or Home. It does not make its own decisions about what to tap, and this feature does not upload screen content. Some secure screens and apps may block control. Android will show its own warning because this permission can operate the screen. You can disable Matty at any time in Accessibility settings."
+            )
+            .setNegativeButton("Not now", null)
+            .setPositiveButton("I understand — continue") { _, _ ->
+                getSharedPreferences("matty_privacy", MODE_PRIVATE)
+                    .edit().putBoolean("cross_app_voice_control_disclosure_accepted", true).apply()
+                try {
+                    startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                } catch (_: Exception) {
+                    status.text = "Open Android Settings and search for Accessibility to enable Matty."
+                }
+            }
+            .show()
+    }
+
+    private fun runCrossAppAction(action: () -> String) {
+        val consent = getSharedPreferences("matty_privacy", MODE_PRIVATE)
+            .getBoolean("cross_app_voice_control_disclosure_accepted", false)
+        if (!consent) {
+            status.text = "First enable cross-app voice control and review the disclosure."
+            return
+        }
+        status.text = action()
     }
 
     private fun beginAccessSetup() {
@@ -383,7 +425,8 @@ class MainActivity : Activity() {
             MattyCommandType.OPEN_NETWORK_SETTINGS -> openSettings(Settings.ACTION_WIRELESS_SETTINGS, "Opening network settings.")
             MattyCommandType.OPEN_NOTIFICATIONS -> openSettings(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS, "Opening notification access settings.")
             MattyCommandType.OPEN_QUICK_SETTINGS -> openSettings(Settings.ACTION_SETTINGS, "Open Quick Settings using your phone's notification shade.")
-            MattyCommandType.GO_BACK, MattyCommandType.GO_HOME -> status.text = "Use your phone's Back or Home controls; Matty does not control other apps in this build."
+            MattyCommandType.GO_BACK -> runCrossAppAction { MattyAccessibilityService.goBack() }
+            MattyCommandType.GO_HOME -> runCrossAppAction { MattyAccessibilityService.goHome() }
             MattyCommandType.VOLUME_DOWN -> adjustVolume(false)
             MattyCommandType.VOLUME_UP -> adjustVolume(true)
             MattyCommandType.START_PLAYBACK -> startPlayback()
@@ -392,9 +435,12 @@ class MainActivity : Activity() {
             MattyCommandType.INSTALL_APP -> openStoreSearch(parsed.argument)
             MattyCommandType.SEARCH_WEB -> searchWeb(parsed.argument)
             MattyCommandType.OPEN_APP_AND_CLICK_LINK -> openApp(parsed.argument)
-            MattyCommandType.CLICK_FIRST_LINK, MattyCommandType.TAP_TEXT, MattyCommandType.TYPE_TEXT,
-            MattyCommandType.SCROLL_UP, MattyCommandType.SCROLL_DOWN ->
-                status.text = "Cross-app tapping, typing, and scrolling are not enabled in this privacy-focused build."
+            MattyCommandType.TAP_TEXT -> runCrossAppAction { MattyAccessibilityService.tapVisibleLabel(parsed.argument) }
+            MattyCommandType.TYPE_TEXT -> runCrossAppAction { MattyAccessibilityService.typeIntoFocusedField(parsed.argument) }
+            MattyCommandType.SCROLL_UP -> runCrossAppAction { MattyAccessibilityService.scroll(false) }
+            MattyCommandType.SCROLL_DOWN -> runCrossAppAction { MattyAccessibilityService.scroll(true) }
+            MattyCommandType.CLICK_FIRST_LINK ->
+                status.text = "Say 'tap' followed by the exact visible link label so Matty can target the right item."
             MattyCommandType.UNKNOWN -> status.text = "I heard you, but that action is not supported yet."
         }
         ensureWakeService()
