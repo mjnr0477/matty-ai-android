@@ -273,6 +273,7 @@ class MainActivity : Activity() {
         transcript.text = "Heard: $raw"
         val parsed = CommandParser.parse(raw)
         when (parsed.type) {
+            MattyCommandType.OPEN_SYSTEM_SETTINGS -> openSettings(Settings.ACTION_SETTINGS, "Opening Android Settings. You can use the screen normally; say Matty when you want another command.")
             MattyCommandType.OPEN_WIFI_SETTINGS -> openSettings(Settings.ACTION_WIFI_SETTINGS, "Opening Wi-Fi settings.")
             MattyCommandType.OPEN_MOBILE_DATA_SETTINGS -> openSettings(Settings.ACTION_DATA_USAGE_SETTINGS, "Opening mobile data settings. Android controls whether data can be switched directly.")
             MattyCommandType.OPEN_BLUETOOTH_SETTINGS -> openSettings(Settings.ACTION_BLUETOOTH_SETTINGS, "Opening Bluetooth settings.")
