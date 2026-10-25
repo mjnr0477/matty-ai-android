@@ -503,7 +503,18 @@ class MainActivity : Activity() {
             override fun onRmsChanged(rmsdB: Float) {}
             override fun onBufferReceived(buffer: ByteArray?) {}
             override fun onEndOfSpeech() { status.text = "Working on it…" }
-            override fun onError(error: Int) { status.text = "Didn't catch that. Check speech service / offline language pack and try again." }
+            override fun onError(error: Int) {
+                status.text = when (error) {
+                    SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> "Microphone permission was denied. Allow it in Android Settings > Apps > Matty AI > Permissions."
+                    SpeechRecognizer.ERROR_LANGUAGE_NOT_SUPPORTED,
+                    SpeechRecognizer.ERROR_LANGUAGE_UNAVAILABLE -> "The selected speech language is unavailable. Install its speech language pack or choose a language supported by your speech service."
+                    SpeechRecognizer.ERROR_SERVER,
+                    SpeechRecognizer.ERROR_NETWORK,
+                    SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> "The speech service could not process audio. Check internet access for standard recognition, or install an offline speech service and language pack."
+                    SpeechRecognizer.ERROR_CLIENT -> "Android's speech service stopped. Check that Google Speech Services or another speech-recognition provider is enabled, then try again."
+                    else -> "Speech recognition failed (error $error). Check that a speech-recognition provider is enabled and supports the selected language; offline mode also needs a downloaded language pack."
+                }
+            }
             override fun onResults(results: Bundle?) {
                 val phrase = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull().orEmpty()
                 // End this one-shot recognizer before a command starts the persistent wake service.
