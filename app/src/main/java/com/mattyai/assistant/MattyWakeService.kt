@@ -174,6 +174,9 @@ class MattyWakeService : Service() {
                 "Sent play to the active media session."
             }
             MattyCommandType.TAP_TEXT -> MattyAccessibilityService.tapVisibleLabel(command.argument)
+            MattyCommandType.LONG_PRESS_TEXT -> MattyAccessibilityService.longPressVisibleLabel(command.argument)
+            MattyCommandType.OPEN_NOTIFICATIONS -> MattyAccessibilityService.openNotifications()
+            MattyCommandType.OPEN_QUICK_SETTINGS -> MattyAccessibilityService.openQuickSettings()
             MattyCommandType.TYPE_TEXT -> MattyAccessibilityService.typeIntoFocusedField(command.argument)
             MattyCommandType.SCROLL_UP -> MattyAccessibilityService.scroll(false)
             MattyCommandType.SCROLL_DOWN -> MattyAccessibilityService.scroll(true)
