@@ -1,4 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
@@ -30,7 +31,8 @@
     </queries>
     <application
         android:allowBackup="false"
-        android:label="Matty AI"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@android:style/Theme.Material.Light.NoActionBar">
         <activity android:name=".MainActivity" android:exported="true">
@@ -41,9 +43,41 @@
         </activity>
         <service
             android:name=".MattyWakeService"
-            android:label="Matty offline voice wake"
+            android:label="Android hands-free voice"
             android:exported="false"
             android:foregroundServiceType="microphone" />
+        <service
+            android:name=".MattyVoiceInteractionService"
+            android:label="@string/app_name"
+            android:permission="android.permission.BIND_VOICE_INTERACTION"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.voice.VoiceInteractionService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.voice_interaction"
+                android:resource="@xml/matty_voice_interaction_service" />
+        </service>
+        <service
+            android:name=".MattyVoiceInteractionSessionService"
+            android:permission="android.permission.BIND_VOICE_INTERACTION"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.voice.VoiceInteractionSessionService" />
+            </intent-filter>
+        </service>
+        <service
+            android:name=".MattyAccessibilityService"
+            android:label="Android cross-app voice control"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/matty_accessibility_service" />
+        </service>
         <activity android:name=".BluetoothActivity" android:exported="false" android:label="Nearby Bluetooth devices" />
     </application>
 </manifest>

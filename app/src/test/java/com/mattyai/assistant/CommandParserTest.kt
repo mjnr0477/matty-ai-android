@@ -4,6 +4,28 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class CommandParserTest {
+
+    @Test fun extractsCommandFollowingWakePhrase() {
+        assertEquals(
+            WakePhraseMatch(true, "tap Send"),
+            CommandParser.extractWakeCommand("Hey Matty, tap Send")
+        )
+    }
+
+    @Test fun recognizesWakePhraseWithoutCommand() {
+        assertEquals(
+            WakePhraseMatch(true, ""),
+            CommandParser.extractWakeCommand("Matty")
+        )
+    }
+
+    @Test fun ignoresUtterancesWithoutWakePhrase() {
+        assertEquals(
+            WakePhraseMatch(false, ""),
+            CommandParser.extractWakeCommand("tap Send")
+        )
+    }
+
     @Test fun stripsWakeNameAndOpensWifiSettings() {
         assertEquals(MattyCommandType.OPEN_WIFI_SETTINGS, CommandParser.parse("Matty, open Wi-Fi").type)
     }
@@ -77,6 +99,20 @@ class CommandParserTest {
     @Test fun parsesScrollingCommands() {
         assertEquals(MattyCommandType.SCROLL_DOWN, CommandParser.parse("scroll down").type)
         assertEquals(MattyCommandType.SCROLL_UP, CommandParser.parse("Matty scroll up").type)
+    }
+
+    @Test fun parsesLongPressAndSystemShadeCommands() {
+        assertEquals(
+            ParsedMattyCommand(MattyCommandType.LONG_PRESS_TEXT, "Profile"),
+            CommandParser.parse("Matty long press Profile")
+        )
+        assertEquals(MattyCommandType.OPEN_NOTIFICATIONS, CommandParser.parse("open notifications").type)
+        assertEquals(MattyCommandType.OPEN_QUICK_SETTINGS, CommandParser.parse("open quick settings").type)
+    }
+
+    @Test fun parsesHorizontalSwipes() {
+        assertEquals(MattyCommandType.SWIPE_LEFT, CommandParser.parse("Matty swipe left").type)
+        assertEquals(MattyCommandType.SWIPE_RIGHT, CommandParser.parse("swipe right").type)
     }
     @Test fun unknownCommandsDoNotCreateArbitraryActions() {
         assertEquals(MattyCommandType.UNKNOWN, CommandParser.parse("transfer all my money").type)

@@ -1,59 +1,62 @@
-# Matty AI — offline-first Android phone assistant
+# Android — native Android hands-free assistant
 
-Matty AI is an independent native Android project. It is separate from Dream Education and Dream Wi-Fi.
+Android is an independent Android project, separate from Dream Education and Dream Wi-Fi. The main screen is designed around one **Enable hands-free / Disable hands-free** control and an in-app voice-language selector.
 
-## Build outputs
+## Build and download
 
-The GitHub Actions workflow tests and builds the debug APK, then creates release APK and AAB outputs. If release signing secrets are configured, the workflow signs the release artifacts and verifies the APK signature. Download the `matty-ai-android-builds` artifact from the latest successful Actions run.
+GitHub Actions runs command-parser unit tests, Android lint, debug APK build, release APK/AAB build, and release signature verification. Download the `matty-ai-android-builds` artifact from the latest successful run:
+https://github.com/mjnr0477/matty-ai-android/actions
 
-## Cross-app command flow
+The artifact is a test build until the device checklist below passes. A successful CI run does not prove reliable background listening or app control on every Android device.
 
-After microphone permission is enabled, the supported flow is:
+## First-time setup
 
-1. Say **“Matty, open WhatsApp”** to launch the installed WhatsApp app.
-2. Say **“Matty, open Bluetooth”** to open Android Bluetooth settings, or tap **Find and pair Bluetooth devices** to scan and request pairing with nearby devices.
-3. Matty can open apps and system settings, but does not tap, type into, or scroll other apps in this privacy-focused build.
+1. Install the APK and open Android.
+2. Tap **Enable hands-free** and grant microphone permission. Matty explains why cross-app access is needed and asks you to review the disclosure.
+3. In Android Accessibility settings, explicitly enable Android's **cross-app voice control** service. This permission is necessary for tapping, typing, scrolling, swiping, and long-pressing controls in other apps.
+4. Return to Matty. The ongoing notification indicates that the background microphone service is running. Keep it enabled while using hands-free.
+5. Matty bundles its own compact English speech model in the APK and copies it into app-private storage on first use. No separate Android speech pack or internet connection is required at runtime. English (US) is the currently integrated recognition model. The APK is larger because it includes the model.
 
-Bluetooth pairing and connections depend on the device, Android permissions, and supported Bluetooth profiles. Generic connection to every Bluetooth device is not possible because many devices require a specific profile or companion app.
+You can turn hands-free off from the same main button. Android may still stop background recognition because of battery management or manufacturer restrictions.
 
-## Current implementation
+## Supported voice actions
 
-- Refreshed native UI with guided microphone setup and a dedicated nearby Bluetooth device screen.
-- Bluetooth discovery, paired-device listing, user-approved pairing requests, and a shortcut to Android Bluetooth settings for profile-specific connections.
-- No Accessibility Service is declared in the release manifest. This removes a sensitive sideloading permission that can trigger Play Protect blocks for internet-downloaded apps; it cannot guarantee Google's classifier will never warn about the APK.
-- Offline-only wake-phrase service prototype using Android on-device speech recognition, a microphone foreground-service notification, and a short screen-wake attempt. It refuses to use cloud recognition for speech.
-- One primary setup button; after Android permissions are approved, Matty attempts to listen for “Matty” and then accept a command after the user unlocks the phone.
-- Local commands to open installed apps and Wi-Fi / mobile-data / Bluetooth / general settings, adjust media volume, open music apps, navigate Home / Back / notifications / Quick Settings, tap visible controls by label, enter text into an editable field, and scroll.
-- **“Install [app]”** opens an app-store search for the requested app. The user reviews the result and confirms installation in Google Play or another system store; Matty does not bypass Android installation confirmations or automatically grant a newly installed app's permissions.
-- **“Search for [query]”** opens a browser web search. This specific action requires an internet connection; core command parsing remains local.
-- Cross-app tapping, text-entry, and scrolling are intentionally disabled in this build. Matty does not request Accessibility access or inspect other apps' screens.
-- Deterministic local command parser with unit tests for supported commands and unknown-command safety.
+Say **“Matty”** followed by a command while the background listener is active.
 
-## Release signing secrets
+- **Launch apps:** “open WhatsApp”, “open Camera”, “open Settings”. The app must be installed and visible to Android's package manager.
+- **Navigate:** “go back”, “go home”, “open notifications”, “open quick settings”.
+- **Control visible app UI** (after enabling Accessibility): “tap Search”, “tap Send”, “long press Profile”, “type Hello there” after focusing a text field, “scroll down”, “scroll up”, “swipe left”, “swipe right”.
+- **Phone/media actions:** “volume up”, “volume down”, “play music”, “open Wi-Fi settings”, “open Bluetooth settings”, “open mobile data settings”.
+- **Find information:** “search for weather in Bungoma” opens a browser search. This needs internet access in the browser.
+- **Install an app:** “install WhatsApp” opens an app-store search. The user reviews the app and confirms installation in the store; Matty does not silently install apps or grant permissions.
+- **Select a link carefully:** if you ask Matty to open an app and click a link, it opens the app and asks you to name the exact visible link label. It will not guess which link to click.
 
-In GitHub repository **Settings → Secrets and variables → Actions**, configure these repository secrets:
+The app performs deterministic, explicit actions. It does not yet have a general-purpose AI planner that can understand arbitrary multi-step requests and independently operate every app. Secure screens, custom controls, WebViews, banking/payment flows, and apps that restrict accessibility may block actions. Review actions that send, post, share, delete, or otherwise affect other people or accounts.
 
-- `ANDROID_KEYSTORE_BASE64`: Base64-encoded contents of the release `.jks` keystore.
-- `ANDROID_KEYSTORE_PASSWORD`: keystore password.
-- `ANDROID_KEY_ALIAS`: key alias in the keystore.
-- `ANDROID_KEY_PASSWORD`: private-key password.
+## Android platform constraints
 
-The workflow decodes the keystore into the runner's temporary directory and does not commit it to the repository. Keep a secure backup of the original keystore and passwords. Never paste them into issues, logs, or source files. If the Base64 secret is absent, CI can still create unsigned release artifacts; those are not ready to publish.
+- Matty bundles the Vosk offline speech engine and English model in the APK, then stores a private working copy on first use. It does not depend on Android's speech-recognition provider or language packs. English is currently supported; more languages require their own compatible models. This is a continuous microphone listener, not a dedicated low-power hardware hotword engine. Screen-off listening, false-trigger rate, battery use, and restart behavior vary by device.
+- Android normally prevents third-party apps from directly toggling mobile data; Matty opens the relevant system settings.
+- Music playback depends on the installed music app and its active media session. Matty cannot guarantee that an arbitrary song starts.
+- Accessibility is powerful and sensitive. The user must explicitly enable it in Android settings; Play Console distribution requires the applicable Accessibility API declaration and policy review.
+- No app can guarantee control of literally every application or secure screen through Accessibility. A CI build cannot substitute for real-device testing.
 
-## Important limitations — not production complete yet
+## Manual device acceptance checklist
 
-- The wake phrase is a **prototype, not production-verified**. Android SpeechRecognizer is not a dedicated low-power hotword engine; it may stop, be killed by battery management, fail to bring Matty forward while locked, or behave differently across manufacturers. A production release needs a dedicated offline keyword-spotting engine and physical-device screen-off, false-trigger, and battery tests.
-- Android usually does not allow third-party apps to toggle mobile data directly. Matty opens the relevant settings page instead.
-- Specific-song playback depends on the installed music app, its APIs, and track availability. This prototype opens a compatible player; it does not guarantee starting an arbitrary song.
-- Android does not permit a third-party app to make a universal connection to every Bluetooth device. Matty can discover nearby devices, request pairing, and open Android's Bluetooth settings; the actual connection depends on the device's Bluetooth profile.
-- Cloud AI is intentionally not wired in. Command matching is local; speech recognition works offline only when Android provides an on-device recognizer with the required downloaded language pack. This build deliberately stops the wake service rather than silently falling back to online recognition. The current app targets Android 12+ because it relies on Android on-device SpeechRecognizer.
-- A CI build passing does not prove the app works reliably on a physical phone. Device verification is required before calling it production-ready.
+1. Install the latest successful CI artifact on a target Android phone.
+2. Enable hands-free and grant microphone permission.
+3. Enable Matty in Accessibility settings after reviewing the in-app disclosure.
+4. Test app launch, visible-label tap, long press, text entry, scroll, swipe, Back, Home, notifications, Quick Settings, volume, and media commands in at least three unrelated apps.
+5. Test screen on/off, lock/unlock, background restrictions, reboot, speech language availability, and battery use. Confirm the ongoing notification matches the real service state.
+6. Verify that unsupported actions are reported honestly and do not claim success.
+7. Only label the app production-ready after real-device tests pass and Accessibility policy requirements for the intended distribution channel are met.
 
-## Manual device test checklist
+## Offline speech model attribution\n\nThe bundled `vosk-model-small-en-us-0.15` model is distributed under Apache License 2.0 by the Vosk project. The build downloads the official model archive from https://alphacephei.com/vosk/models and packages it into the APK.\n\n## Release signing
 
-1. Install the debug build and open Matty AI.
-2. Tap **Allow Matty to access my phone** and grant microphone and notification permissions.
-3. Confirm the ongoing “Matty is ready” notification appears. Test an offline command such as “open Wi-Fi settings”.
-4. Tap **Find and pair Bluetooth devices**, grant Nearby devices permission, scan for a powered-on discoverable accessory, and confirm Android's pairing prompt.
-5. Test Bluetooth connection from Android settings for the relevant device profile; test the wake service with screen on/off and inspect battery use.
-6. Repeat with Wi-Fi/mobile data disabled and verify speech remains on-device. Record actual outcomes and fix device-specific failures before release. Do not publish as production-ready until these tests pass on target devices.
+GitHub Actions reads these repository secrets without exposing their values in source:
+- `ANDROID_KEYSTORE_BASE64`
+- `ANDROID_KEYSTORE_PASSWORD`
+- `ANDROID_KEY_ALIAS`
+- `ANDROID_KEY_PASSWORD`
+
+Keep a secure backup of the release keystore and passwords. Never commit or share them.

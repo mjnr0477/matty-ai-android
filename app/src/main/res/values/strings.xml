@@ -1,3 +1,4 @@
 <resources>
-    <string name="app_name">Matty AI</string>
+    <string name="app_name">Android</string>
+    <string name="matty_accessibility_service_description">Android uses visible screen labels to carry out only the tap, text-entry, and scroll commands you explicitly speak. Actions are handled on this device.</string>
 </resources>
