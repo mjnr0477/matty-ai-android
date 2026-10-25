@@ -211,7 +211,7 @@ class MainActivity : Activity() {
             command.contains("go home") || command == "home" -> globalAction(AccessibilityServiceAction.HOME, "Going home.")
             command.contains("volume down") || command.contains("turn down volume") || command.contains("lower volume") -> adjustVolume(false)
             command.contains("volume up") || command.contains("turn up volume") || command.contains("raise volume") -> adjustVolume(true)
-            command.contains("play music") || command.contains("start music") || command.contains("start this song") || command.contains("open music") -> openMusic()
+            command.contains("play music") || command.contains("start music") || command.contains("start this song") || command == "start song" || command.startsWith("play ") || command.contains("open music") -> openMusic()
             command.startsWith("open ") || command.startsWith("launch ") || command.startsWith("start ") -> openApp(command.substringAfter(' ').trim())
             else -> status.text = "I heard you, but don't have a safe action for that command yet. Try one of the examples below."
         }
