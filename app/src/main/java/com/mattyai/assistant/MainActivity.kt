@@ -39,6 +39,7 @@ class MainActivity : Activity() {
     private lateinit var accessButton: Button
     private var recognizer: SpeechRecognizer? = null
     private var assistantInvocationActive = false
+    private var commandStartScheduled = false
     private val requestAudio = 501
     private val requestAssistantRole = 502
     private lateinit var assistantButton: Button
@@ -93,7 +94,7 @@ class MainActivity : Activity() {
     }
 
     private fun startCommandAfterUnlockIfPossible() {
-        if (!isVoiceInvocation()) return
+        if (!isVoiceInvocation() || commandStartScheduled) return
         val keyguard = getSystemService(KEYGUARD_SERVICE) as KeyguardManager
         if (keyguard.isKeyguardLocked) {
             status.text = "Unlock your phone, then speak your command."
@@ -102,7 +103,10 @@ class MainActivity : Activity() {
         intent?.removeExtra(MattyWakeService.EXTRA_WAKE_WORD)
         intent?.removeExtra(EXTRA_ASSISTANT_INVOKED)
         status.text = "Matty heard you. Tell me what to do."
+        commandStartScheduled = true
         Handler(Looper.getMainLooper()).postDelayed({
+            commandStartScheduled = false
+            assistantInvocationActive = false
             if (!isFinishing && !isDestroyed &&
                 !(getSystemService(KEYGUARD_SERVICE) as KeyguardManager).isKeyguardLocked) {
                 startListening()
