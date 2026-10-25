@@ -5,7 +5,7 @@ enum class MattyCommandType {
     OPEN_SYSTEM_SETTINGS, OPEN_WIFI_SETTINGS, OPEN_MOBILE_DATA_SETTINGS, OPEN_BLUETOOTH_SETTINGS,
     OPEN_NETWORK_SETTINGS, OPEN_NOTIFICATIONS, OPEN_QUICK_SETTINGS,
     GO_BACK, GO_HOME, VOLUME_DOWN, VOLUME_UP, START_PLAYBACK,
-    OPEN_MUSIC, OPEN_APP, INSTALL_APP, SEARCH_WEB, OPEN_APP_AND_CLICK_LINK, TAP_TEXT, LONG_PRESS_TEXT, CLICK_FIRST_LINK, TYPE_TEXT, SCROLL_UP, SCROLL_DOWN, UNKNOWN
+    OPEN_MUSIC, OPEN_APP, INSTALL_APP, SEARCH_WEB, OPEN_APP_AND_CLICK_LINK, TAP_TEXT, LONG_PRESS_TEXT, CLICK_FIRST_LINK, TYPE_TEXT, SCROLL_UP, SCROLL_DOWN, SWIPE_LEFT, SWIPE_RIGHT, UNKNOWN
 }
 
 data class ParsedMattyCommand(val type: MattyCommandType, val argument: String = "")
@@ -78,6 +78,9 @@ object CommandParser {
                 )
             command.startsWith("enter text ") -> ParsedMattyCommand(MattyCommandType.TYPE_TEXT, original.replace(Regex("(?i)^enter text\\s+"), "").trim())
             command.startsWith("type ") -> ParsedMattyCommand(MattyCommandType.TYPE_TEXT, original.replace(Regex("(?i)^type\\s+"), "").trim())
+            command == "swipe left" || command == "swipe right" -> ParsedMattyCommand(
+                if (command.endsWith("left")) MattyCommandType.SWIPE_LEFT else MattyCommandType.SWIPE_RIGHT
+            )
             command.contains("scroll down") || command == "swipe up" -> ParsedMattyCommand(MattyCommandType.SCROLL_DOWN)
             command.contains("scroll up") || command == "swipe down" -> ParsedMattyCommand(MattyCommandType.SCROLL_UP)
             command == "settings" || command == "open settings" || command == "phone settings" || command == "system settings" -> ParsedMattyCommand(MattyCommandType.OPEN_SYSTEM_SETTINGS)
