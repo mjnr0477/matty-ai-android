@@ -35,6 +35,7 @@ class MattyWakeService : Service() {
     private var ttsReady = false
     private var resumeAfterSpeech = false
     private var speechGeneration = 0
+    private var activeUtteranceId: String? = null
     private val handler = Handler(Looper.getMainLooper())
     private val retryListening = Runnable { startListening() }
 
@@ -57,14 +58,14 @@ class MattyWakeService : Service() {
                 tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
                     override fun onStart(utteranceId: String?) = Unit
                     override fun onDone(utteranceId: String?) {
-                        handler.post { finishSpeechAndResume() }
+                        handler.post { if (utteranceId == activeUtteranceId) finishSpeechAndResume() }
                     }
                     @Deprecated("Deprecated by Android")
                     override fun onError(utteranceId: String?) {
-                        handler.post { finishSpeechAndResume() }
+                        handler.post { if (utteranceId == activeUtteranceId) finishSpeechAndResume() }
                     }
                     override fun onError(utteranceId: String?, errorCode: Int) {
-                        handler.post { finishSpeechAndResume() }
+                        handler.post { if (utteranceId == activeUtteranceId) finishSpeechAndResume() }
                     }
                 })
             }
@@ -167,11 +168,12 @@ class MattyWakeService : Service() {
         handler.removeCallbacks(retryListening)
         listening = false
         val generation = ++speechGeneration
+        activeUtteranceId = "matty-result-$generation"
         resumeAfterSpeech = true
         val queued = try {
             if (ttsReady) {
                 val result = if (Build.VERSION.SDK_INT >= 21) {
-                    tts?.speak(message, TextToSpeech.QUEUE_FLUSH, null, "matty-result-$generation")
+                    tts?.speak(message, TextToSpeech.QUEUE_FLUSH, null, activeUtteranceId)
                 } else {
                     @Suppress("DEPRECATION")
                     tts?.speak(message, TextToSpeech.QUEUE_FLUSH, null)
@@ -188,6 +190,7 @@ class MattyWakeService : Service() {
     private fun finishSpeechAndResume() {
         if (!resumeAfterSpeech) return
         resumeAfterSpeech = false
+        activeUtteranceId = null
         handler.removeCallbacks(retryListening)
         handler.postDelayed(retryListening, 250L)
     }
