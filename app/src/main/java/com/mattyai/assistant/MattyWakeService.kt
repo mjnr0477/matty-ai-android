@@ -168,13 +168,14 @@ class MattyWakeService : Service() {
         }
     }
 
+    @Suppress("DEPRECATION")
     private fun buildNotification(message: String): Notification {
         val open = PendingIntent.getActivity(
             this, 0, Intent(this, MainActivity::class.java),
             PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= 23) PendingIntent.FLAG_IMMUTABLE else 0)
         )
         val builder = if (Build.VERSION.SDK_INT >= 26) Notification.Builder(this, CHANNEL_ID)
-            else @Suppress("DEPRECATION") Notification.Builder(this)
+            else Notification.Builder(this)
         return builder.setSmallIcon(android.R.drawable.ic_btn_speak_now)
             .setContentTitle("Matty voice assistant")
             .setContentText(message)
