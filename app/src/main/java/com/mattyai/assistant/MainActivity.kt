@@ -123,16 +123,40 @@ class MainActivity : Activity() {
     private fun ensureWakeService() {
         if (!getSharedPreferences("matty_settings", MODE_PRIVATE).getBoolean("hands_free_enabled", false)) return
         if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) return
-        if (!SpeechRecognizer.isOnDeviceRecognitionAvailable(this)) {
-            if (::status.isInitialized) status.text = "This phone has no available on-device speech recognizer. Install an offline speech service and language pack; Matty will not use online speech."
+        val offlineAvailable = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+            SpeechRecognizer.isOnDeviceRecognitionAvailable(this)
+        val fallbackAccepted = getSharedPreferences("matty_settings", MODE_PRIVATE)
+            .getBoolean("online_speech_fallback_accepted", false)
+        if (!offlineAvailable && !fallbackAccepted) {
+            requestOnlineSpeechFallbackConsent { startWakeService() }
             return
         }
+        startWakeService()
+    }
+
+    private fun startWakeService() {
         try {
             val serviceIntent = Intent(this, MattyWakeService::class.java)
             if (Build.VERSION.SDK_INT >= 26) startForegroundService(serviceIntent) else startService(serviceIntent)
         } catch (_: Exception) {
             if (::status.isInitialized) status.text = "Android stopped background listening. Open Matty and try enabling voice wake again."
         }
+    }
+
+    private fun requestOnlineSpeechFallbackConsent(onAccepted: () -> Unit) {
+        AlertDialog.Builder(this)
+            .setTitle("Allow online speech recognition?")
+            .setMessage("This phone does not provide an available on-device speech recognizer. You can install an offline speech service and language pack, or let Matty use Android's standard speech recognizer. Depending on your device and provider, audio may be sent to a speech service for processing. Continue only if you are comfortable with that.")
+            .setNegativeButton("Not now") { _, _ ->
+                if (::status.isInitialized) status.text = "Speech is unavailable until you install an offline speech service or allow standard speech recognition."
+            }
+            .setPositiveButton("Allow standard speech") { _, _ ->
+                getSharedPreferences("matty_settings", MODE_PRIVATE).edit()
+                    .putBoolean("online_speech_fallback_accepted", true).apply()
+                onAccepted()
+            }
+            .show()
+    }
     }
 
     private fun buildUi() {
@@ -427,16 +451,21 @@ class MainActivity : Activity() {
         if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             beginAccessSetup(); return
         }
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || !SpeechRecognizer.isOnDeviceRecognitionAvailable(this)) {
-            status.text = "Offline speech recognition is unavailable. Install an on-device speech service and download your language pack; Matty will not use cloud speech."
+        val offlineAvailable = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+            SpeechRecognizer.isOnDeviceRecognitionAvailable(this)
+        val fallbackAccepted = getSharedPreferences("matty_settings", MODE_PRIVATE)
+            .getBoolean("online_speech_fallback_accepted", false)
+        if (!offlineAvailable && !fallbackAccepted) {
+            requestOnlineSpeechFallbackConsent { startListening() }
             return
         }
         assistantInvocationActive = false
         recognizer?.destroy()
         recognizer = try {
-            SpeechRecognizer.createOnDeviceSpeechRecognizer(this)
+            if (offlineAvailable) SpeechRecognizer.createOnDeviceSpeechRecognizer(this)
+            else SpeechRecognizer.createSpeechRecognizer(this)
         } catch (_: Exception) {
-            status.text = "Couldn't start on-device speech recognition. Check the offline language pack and try again."
+            status.text = "Couldn't start speech recognition. Check that an Android speech service is installed and try again."
             return
         }
         recognizer?.setRecognitionListener(object : RecognitionListener {
@@ -459,7 +488,7 @@ class MainActivity : Activity() {
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             putExtra(RecognizerIntent.EXTRA_LANGUAGE, selectedVoiceLocale().toLanguageTag())
-            putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
+            putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, offlineAvailable)
             putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false)
         }
         try { recognizer?.startListening(intent) } catch (_: Exception) { status.text = "Couldn't start speech recognition on this phone." }
