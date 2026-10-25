@@ -44,6 +44,26 @@
             android:label="Matty offline voice wake"
             android:exported="false"
             android:foregroundServiceType="microphone" />
+        <service
+            android:name=".MattyVoiceInteractionService"
+            android:label="Matty AI"
+            android:permission="android.permission.BIND_VOICE_INTERACTION"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.voice.VoiceInteractionService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.voice_interaction"
+                android:resource="@xml/matty_voice_interaction_service" />
+        </service>
+        <service
+            android:name=".MattyVoiceInteractionSessionService"
+            android:permission="android.permission.BIND_VOICE_INTERACTION"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.voice.VoiceInteractionSessionService" />
+            </intent-filter>
+        </service>
         <activity android:name=".BluetoothActivity" android:exported="false" android:label="Nearby Bluetooth devices" />
     </application>
 </manifest>
