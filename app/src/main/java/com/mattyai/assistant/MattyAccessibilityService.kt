@@ -69,7 +69,7 @@ class MattyAccessibilityService : AccessibilityService() {
                     depth++
                 }
                 current
-            }.distinctBy { it.windowId.toString() + ":" + it.viewIdResourceName + ":" + it.text + ":" + it.contentDescription }
+            }.distinct()
             if (clickTargets.isEmpty()) return "I couldn't find a tappable item named $cleaned on this screen."
             if (clickTargets.size > 1) return "I found more than one item named $cleaned. Say a more specific visible label."
             return if (clickTargets.single().performAction(AccessibilityNodeInfo.ACTION_CLICK)) {
@@ -112,7 +112,7 @@ class MattyAccessibilityService : AccessibilityService() {
                 }
             }
             visit(root, 0)
-            val targets = candidates.distinctBy { it.windowId.toString() + ":" + it.viewIdResourceName + ":" + it.className }
+            val targets = candidates.distinct()
             if (targets.isEmpty()) return "I couldn't find a scrollable area on this screen."
             val successful = targets.firstOrNull { it.performAction(action) }
             return if (successful != null) {
