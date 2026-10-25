@@ -54,6 +54,10 @@ class BluetoothActivity : Activity() {
                 }
                 BluetoothAdapter.ACTION_DISCOVERY_FINISHED -> status.text =
                     "Scan finished. Tap an unpaired device to pair, or open Bluetooth settings to connect a paired device."
+                BluetoothDevice.ACTION_BOND_STATE_CHANGED -> {
+                    loadPairedDevices()
+                    status.text = "Bluetooth pairing state updated."
+                }
             }
         }
     }
@@ -168,8 +172,11 @@ class BluetoothActivity : Activity() {
                 val filter = IntentFilter().apply {
                     addAction(BluetoothDevice.ACTION_FOUND)
                     addAction(BluetoothAdapter.ACTION_DISCOVERY_FINISHED)
+                    addAction(BluetoothDevice.ACTION_BOND_STATE_CHANGED)
                 }
-                if (Build.VERSION.SDK_INT >= 33) registerReceiver(discoveryReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+                // Android's Bluetooth stack is a privileged system app, so this receiver must
+                // be exported to receive its discovery and bond-state broadcasts on Android 13+.
+                if (Build.VERSION.SDK_INT >= 33) registerReceiver(discoveryReceiver, filter, Context.RECEIVER_EXPORTED)
                 else {
                     @Suppress("DEPRECATION")
                     registerReceiver(discoveryReceiver, filter)
