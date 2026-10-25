@@ -4,6 +4,8 @@ import android.accessibilityservice.AccessibilityService
 import android.content.Context
 import android.os.Bundle
 import android.view.accessibility.AccessibilityEvent
+import android.graphics.Path
+import android.accessibilityservice.GestureDescription
 import android.view.accessibility.AccessibilityNodeInfo
 
 /**
@@ -105,6 +107,25 @@ class MattyAccessibilityService : AccessibilityService() {
                 else "I found more than one long-press target named $cleaned. Be more specific."
             return if (targets.single().performAction(AccessibilityNodeInfo.ACTION_LONG_CLICK)) "Pressed and held $cleaned."
                 else "Android did not allow a long press on $cleaned."
+        }
+
+        fun swipeLeft(): String = swipe(fromRight = true)
+        fun swipeRight(): String = swipe(fromRight = false)
+
+        private fun swipe(fromRight: Boolean): String {
+            val service = activeService ?: return "Enable Matty cross-app voice control in Accessibility settings first."
+            consentMessage(service)?.let { return it }
+            if (android.os.Build.VERSION.SDK_INT < 24) return "Swipe gestures require Android 7 or later."
+            val metrics = service.resources.displayMetrics
+            val y = metrics.heightPixels * 0.52f
+            val startX = if (fromRight) metrics.widthPixels * 0.86f else metrics.widthPixels * 0.14f
+            val endX = if (fromRight) metrics.widthPixels * 0.14f else metrics.widthPixels * 0.86f
+            val path = Path().apply { moveTo(startX, y); lineTo(endX, y) }
+            val stroke = GestureDescription.StrokeDescription(path, 0L, 300L)
+            val gesture = GestureDescription.Builder().addStroke(stroke).build()
+            return if (service.dispatchGesture(gesture, null, null)) {
+                if (fromRight) "Swiped left." else "Swiped right."
+            } else "Android did not accept the swipe gesture."
         }
 
         fun typeIntoFocusedField(value: String): String {
