@@ -14,4 +14,10 @@ android {
         versionCode = 2
         versionName = "0.2.0"
     }
+
+    testOptions { unitTests.isIncludeAndroidResources = false }
+}
+
+dependencies {
+    testImplementation("junit:junit:4.13.2")
 }
