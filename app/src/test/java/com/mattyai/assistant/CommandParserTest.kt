@@ -33,6 +33,16 @@ class CommandParserTest {
             CommandParser.parse("there's a link there, click to open the link").type
         )
     }
+    @Test fun parsesCompoundOpenAppThenClickLink() {
+        assertEquals(
+            ParsedMattyCommand(MattyCommandType.OPEN_APP_AND_CLICK_LINK, "whatsapp"),
+            CommandParser.parse("open WhatsApp at this time there's a link there click to open the link")
+        )
+        assertEquals(
+            ParsedMattyCommand(MattyCommandType.OPEN_APP_AND_CLICK_LINK, "whatsapp"),
+            CommandParser.parse("open WhatsApp and click the link")
+        )
+    }
     @Test fun parsesTextEntryLocally() {
         assertEquals(ParsedMattyCommand(MattyCommandType.TYPE_TEXT, "Hello There!"), CommandParser.parse("Matty type Hello There!"))
         assertEquals(ParsedMattyCommand(MattyCommandType.TYPE_TEXT, "good morning"), CommandParser.parse("enter text good morning"))
