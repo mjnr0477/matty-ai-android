@@ -151,10 +151,22 @@ class MainActivity : Activity() {
     }
 
     private fun beginAccessSetup() {
+        val needed = mutableListOf<String>()
         if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-            requestPermissions(arrayOf(Manifest.permission.RECORD_AUDIO), requestAudio)
+            needed.add(Manifest.permission.RECORD_AUDIO)
+        }
+        if (Build.VERSION.SDK_INT >= 33 &&
+            checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            needed.add(Manifest.permission.POST_NOTIFICATIONS)
+        }
+        if (needed.isNotEmpty()) {
+            requestPermissions(needed.toTypedArray(), requestAudio)
             return
         }
+        continueAccessSetup()
+    }
+
+    private fun continueAccessSetup() {
         if (!MattyAccessibilityService.isEnabled(this)) {
             status.text = "Enable Matty in Android Accessibility settings, then return here."
             startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
@@ -184,12 +196,11 @@ class MainActivity : Activity() {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == requestAudio) {
             refreshAccessState()
-            if (grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED && !MattyAccessibilityService.isEnabled(this)) {
-                status.text = "Microphone allowed. Next, enable Matty in Accessibility settings."
-                startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
-            } else if (grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED) {
-                ensureWakeService()
+            if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+                status.text = "Microphone access is required for voice commands."
+                return
             }
+            continueAccessSetup()
         }
     }
 
