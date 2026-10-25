@@ -199,23 +199,23 @@ class MainActivity : Activity() {
     }
 
     private fun handleCommand(raw: String) {
-        val command = raw.trim().lowercase(Locale.ROOT).replace(Regex("^(hey\\s+)?matty[ ,]*"), "").trim()
-        transcript.text = if (command.isBlank()) raw else "Heard: $raw"
-        when {
-            command.contains("wifi") || command.contains("wi-fi") -> openSettings(Settings.ACTION_WIFI_SETTINGS, "Opening Wi-Fi settings.")
-            command.contains("mobile data") || command.contains("cellular data") || command == "data" -> openSettings(Settings.ACTION_DATA_USAGE_SETTINGS, "Opening mobile data settings. Android controls whether data can be switched directly.")
-            command.contains("bluetooth") -> openSettings(Settings.ACTION_BLUETOOTH_SETTINGS, "Opening Bluetooth settings.")
-            command.contains("internet settings") || command.contains("network settings") -> openSettings(Settings.ACTION_WIRELESS_SETTINGS, "Opening network settings.")
-            command.contains("notification") -> globalAction(AccessibilityServiceAction.NOTIFICATIONS, "Opening notifications.")
-            command.contains("quick settings") || command.contains("control center") -> globalAction(AccessibilityServiceAction.QUICK_SETTINGS, "Opening quick settings.")
-            command.contains("go back") || command == "back" -> globalAction(AccessibilityServiceAction.BACK, "Going back.")
-            command.contains("go home") || command == "home" -> globalAction(AccessibilityServiceAction.HOME, "Going home.")
-            command.contains("volume down") || command.contains("turn down volume") || command.contains("lower volume") -> adjustVolume(false)
-            command.contains("volume up") || command.contains("turn up volume") || command.contains("raise volume") -> adjustVolume(true)
-            command.contains("start this song") || command == "start song" -> startPlayback()
-            command.contains("play music") || command.contains("start music") || command.startsWith("play ") || command.contains("open music") -> openMusic()
-            command.startsWith("open ") || command.startsWith("launch ") || command.startsWith("start ") -> openApp(command.substringAfter(' ').trim())
-            else -> status.text = "I heard you, but don't have a safe action for that command yet. Try one of the examples below."
+        transcript.text = "Heard: $raw"
+        val parsed = CommandParser.parse(raw)
+        when (parsed.type) {
+            MattyCommandType.OPEN_WIFI_SETTINGS -> openSettings(Settings.ACTION_WIFI_SETTINGS, "Opening Wi-Fi settings.")
+            MattyCommandType.OPEN_MOBILE_DATA_SETTINGS -> openSettings(Settings.ACTION_DATA_USAGE_SETTINGS, "Opening mobile data settings. Android controls whether data can be switched directly.")
+            MattyCommandType.OPEN_BLUETOOTH_SETTINGS -> openSettings(Settings.ACTION_BLUETOOTH_SETTINGS, "Opening Bluetooth settings.")
+            MattyCommandType.OPEN_NETWORK_SETTINGS -> openSettings(Settings.ACTION_WIRELESS_SETTINGS, "Opening network settings.")
+            MattyCommandType.OPEN_NOTIFICATIONS -> globalAction(AccessibilityServiceAction.NOTIFICATIONS, "Opening notifications.")
+            MattyCommandType.OPEN_QUICK_SETTINGS -> globalAction(AccessibilityServiceAction.QUICK_SETTINGS, "Opening quick settings.")
+            MattyCommandType.GO_BACK -> globalAction(AccessibilityServiceAction.BACK, "Going back.")
+            MattyCommandType.GO_HOME -> globalAction(AccessibilityServiceAction.HOME, "Going home.")
+            MattyCommandType.VOLUME_DOWN -> adjustVolume(false)
+            MattyCommandType.VOLUME_UP -> adjustVolume(true)
+            MattyCommandType.START_PLAYBACK -> startPlayback()
+            MattyCommandType.OPEN_MUSIC -> openMusic()
+            MattyCommandType.OPEN_APP -> openApp(parsed.argument)
+            MattyCommandType.UNKNOWN -> status.text = "I heard you, but don't have a safe action for that command yet. Try one of the examples below."
         }
     }
 
