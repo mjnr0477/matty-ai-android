@@ -22,8 +22,8 @@ Bluetooth pairing and connections depend on the device, Android permissions, and
 - Bluetooth discovery, paired-device listing, user-approved pairing requests, and a shortcut to Android Bluetooth settings for profile-specific connections.
 - No Accessibility Service is declared in the release manifest. This removes a sensitive sideloading permission that can trigger Play Protect blocks for internet-downloaded apps; it cannot guarantee Google's classifier will never warn about the APK.
 - Offline-only wake-phrase service prototype using Android on-device speech recognition, a microphone foreground-service notification, and a short screen-wake attempt. It refuses to use cloud recognition for speech.
-- One primary setup button; after Android permissions are approved, Matty attempts to listen for “Matty” and then accept a command after the user unlocks the phone.
-- Local commands to open installed apps and Wi-Fi / mobile-data / Bluetooth / general settings, adjust media volume, open music apps, navigate Home / Back / notifications / Quick Settings, tap visible controls by label, enter text into an editable field, and scroll.
+- Primary controls now include **Tap to talk** (manual one-shot speech recognition) and **Type a command** (reliable fallback if wake-word detection or speech recognition is unavailable). The optional background “Matty” wake phrase remains experimental and depends on Android's on-device speech service.
+- Local commands to open installed apps and Wi-Fi / mobile-data / Bluetooth / general settings, adjust media volume, open music apps, and start a web search. Cross-app tapping, typing, and scrolling are not supported.
 - **“Install [app]”** opens an app-store search for the requested app. The user reviews the result and confirms installation in Google Play or another system store; Matty does not bypass Android installation confirmations or automatically grant a newly installed app's permissions.
 - **“Search for [query]”** opens a browser web search. This specific action requires an internet connection; core command parsing remains local.
 - Cross-app tapping, text-entry, and scrolling are intentionally disabled in this build. Matty does not request Accessibility access or inspect other apps' screens.
@@ -53,7 +53,7 @@ The workflow decodes the keystore into the runner's temporary directory and does
 
 1. Install the debug build and open Matty AI.
 2. Tap **Allow Matty to access my phone** and grant microphone and notification permissions.
-3. Confirm the ongoing “Matty is ready” notification appears. Test an offline command such as “open Wi-Fi settings”.
+3. Test **Type a command** with `open Wi-Fi settings`, then return to Matty and test **Tap to talk**. Only then test the optional background wake phrase.
 4. Tap **Find and pair Bluetooth devices**, grant Nearby devices permission, scan for a powered-on discoverable accessory, and confirm Android's pairing prompt.
 5. Test Bluetooth connection from Android settings for the relevant device profile; test the wake service with screen on/off and inspect battery use.
 6. Repeat with Wi-Fi/mobile data disabled and verify speech remains on-device. Record actual outcomes and fix device-specific failures before release. Do not publish as production-ready until these tests pass on target devices.
