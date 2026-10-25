@@ -12,13 +12,12 @@ data class ParsedMattyCommand(val type: MattyCommandType, val argument: String =
 
 object CommandParser {
     fun parse(raw: String): ParsedMattyCommand {
-        val command = raw.trim().lowercase()
-            .replace(Regex("^(hey\\s+)?matty[ ,]*"), "")
-            .trim()
+        val original = raw.trim().replace(Regex("(?i)^(hey\\s+)?matty[ ,]*"), "").trim()
+        val command = original.lowercase()
         return when {
-            command.startsWith("tap ") || command.startsWith("click ") -> ParsedMattyCommand(MattyCommandType.TAP_TEXT, command.substringAfter(" ").trim())
-            command.startsWith("enter text ") -> ParsedMattyCommand(MattyCommandType.TYPE_TEXT, command.removePrefix("enter text ").trim())
-            command.startsWith("type ") -> ParsedMattyCommand(MattyCommandType.TYPE_TEXT, command.removePrefix("type ").trim())
+            command.startsWith("tap ") || command.startsWith("click ") -> ParsedMattyCommand(MattyCommandType.TAP_TEXT, original.substringAfter(" ").trim())
+            command.startsWith("enter text ") -> ParsedMattyCommand(MattyCommandType.TYPE_TEXT, original.replace(Regex("(?i)^enter text\\s+"), "").trim())
+            command.startsWith("type ") -> ParsedMattyCommand(MattyCommandType.TYPE_TEXT, original.replace(Regex("(?i)^type\\s+"), "").trim())
             command.contains("scroll down") || command == "swipe up" -> ParsedMattyCommand(MattyCommandType.SCROLL_DOWN)
             command.contains("scroll up") || command == "swipe down" -> ParsedMattyCommand(MattyCommandType.SCROLL_UP)
             command.contains("wifi") || command.contains("wi-fi") -> ParsedMattyCommand(MattyCommandType.OPEN_WIFI_SETTINGS)
