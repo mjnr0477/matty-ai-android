@@ -12,6 +12,7 @@ import android.view.KeyEvent
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.app.KeyguardManager
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
@@ -41,11 +42,44 @@ class MainActivity : Activity() {
         window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
         buildUi()
         refreshAccessState()
+        startCommandAfterUnlockIfPossible()
     }
 
     override fun onResume() {
         super.onResume()
-        if (::accessButton.isInitialized) refreshAccessState()
+        if (::accessButton.isInitialized) {
+            refreshAccessState()
+            ensureWakeService()
+            startCommandAfterUnlockIfPossible()
+        }
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) startCommandAfterUnlockIfPossible()
+    }
+
+    private fun startCommandAfterUnlockIfPossible() {
+        if (intent?.getBooleanExtra(MattyWakeService.EXTRA_WAKE_WORD, false) != true) return
+        val keyguard = getSystemService(KEYGUARD_SERVICE) as KeyguardManager
+        if (keyguard.isKeyguardLocked) {
+            status.text = "Unlock your phone, then speak your command."
+            return
+        }
+        intent?.removeExtra(MattyWakeService.EXTRA_WAKE_WORD)
+        status.text = "Matty heard you. Tell me what to do."
+        startListening()
+    }
+
+    private fun ensureWakeService() {
+        if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED ||
+            !MattyAccessibilityService.isEnabled(this)) return
+        try {
+            val serviceIntent = Intent(this, MattyWakeService::class.java)
+            if (Build.VERSION.SDK_INT >= 26) startForegroundService(serviceIntent) else startService(serviceIntent)
+        } catch (_: Exception) {
+            if (::status.isInitialized) status.text = "Android stopped background listening. Open Matty and try enabling voice wake again."
+        }
     }
 
     private fun buildUi() {
@@ -87,12 +121,6 @@ class MainActivity : Activity() {
         hero.addView(status, params(bottom = 8))
         transcript = text("Try: “Matty, open WhatsApp”", 13f, ink, false).apply { gravity = Gravity.CENTER }
         hero.addView(transcript, params(bottom = 14))
-        val speak = Button(this).apply {
-            text = "Speak to Matty  ·  🎙"; textSize = 15f; isAllCaps = false; setTextColor(Color.WHITE)
-            background = rounded(purple, 18); setPadding(dp(18), dp(8), dp(18), dp(8))
-            setOnClickListener { startListening() }
-        }
-        hero.addView(speak, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(54)))
         page.addView(hero, params(bottom = 16))
 
         val accessCard = LinearLayout(this).apply {
@@ -108,15 +136,6 @@ class MainActivity : Activity() {
         accessCard.addView(accessButton, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(50)))
         page.addView(accessCard, params(bottom = 20))
 
-        page.addView(text("TRY SAYING", 11f, muted, true), params(bottom = 10))
-        val examples = listOf("Open WhatsApp", "Open Wi-Fi settings", "Open mobile data settings", "Play music", "Turn volume down", "Open TikTok")
-        examples.forEach { example ->
-            val chip = TextView(this).apply {
-                text = "↗   $example"; textSize = 14f; setTextColor(ink); setPadding(dp(15), dp(13), dp(15), dp(13))
-                background = rounded(Color.rgb(247, 248, 252), 14)
-            }
-            page.addView(chip, params(bottom = 7))
-        }
         page.addView(text("PRIVACY FIRST · Commands are handled on your phone where possible. Offline speech depends on your Android speech service and downloaded language packs.", 11f, muted, false), params(top = 14))
         setContentView(scroll)
     }
@@ -130,8 +149,9 @@ class MainActivity : Activity() {
             status.text = "Enable Matty in Android Accessibility settings, then return here."
             startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
         } else {
-            status.text = "Matty has the permissions currently needed for supported commands."
+            status.text = "Starting offline voice wake. Keep Matty's ongoing notification enabled."
             refreshAccessState()
+            ensureWakeService()
         }
     }
 
@@ -146,7 +166,7 @@ class MainActivity : Activity() {
         status.text = when {
             !mic -> "Microphone permission is needed for voice commands."
             !accessibility -> "Microphone ready. Enable Matty's Accessibility Service for supported phone navigation."
-            else -> "Matty is ready for supported voice commands. Tap Speak to Matty to begin."
+            else -> "Matty is ready for supported voice commands. Say “Matty” to begin."
         }
     }
 
@@ -157,6 +177,8 @@ class MainActivity : Activity() {
             if (grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED && !MattyAccessibilityService.isEnabled(this)) {
                 status.text = "Microphone allowed. Next, enable Matty in Accessibility settings."
                 startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+            } else if (grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED) {
+                ensureWakeService()
             }
         }
     }
@@ -215,8 +237,9 @@ class MainActivity : Activity() {
             MattyCommandType.START_PLAYBACK -> startPlayback()
             MattyCommandType.OPEN_MUSIC -> openMusic()
             MattyCommandType.OPEN_APP -> openApp(parsed.argument)
-            MattyCommandType.UNKNOWN -> status.text = "I heard you, but don't have a safe action for that command yet. Try one of the examples below."
+            MattyCommandType.UNKNOWN -> status.text = "I heard you, but that action is not supported yet."
         }
+        ensureWakeService()
     }
 
     private fun openSettings(action: String, message: String) {
