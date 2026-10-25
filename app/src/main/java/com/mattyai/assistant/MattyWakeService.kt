@@ -8,6 +8,8 @@ import android.app.Service
 import android.content.Intent
 import android.os.Build
 import android.os.IBinder
+import android.os.Handler
+import android.os.Looper
 import android.os.PowerManager
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
@@ -24,6 +26,8 @@ class MattyWakeService : Service() {
     private var recognizer: SpeechRecognizer? = null
     private var listening = false
     private var wakeLock: PowerManager.WakeLock? = null
+    private val handler = Handler(Looper.getMainLooper())
+    private val retryListening = Runnable { startWakeListening() }
 
     override fun onCreate() {
         super.onCreate()
@@ -60,7 +64,7 @@ class MattyWakeService : Service() {
                 override fun onEndOfSpeech() { listening = false }
                 override fun onError(error: Int) {
                     listening = false
-                    if (!wakeTriggered) startWakeListening()
+                    if (!wakeTriggered) handler.postDelayed(retryListening, 900L)
                 }
                 override fun onResults(results: Bundle?) {
                     listening = false
@@ -75,7 +79,7 @@ class MattyWakeService : Service() {
                         try { startActivity(intent) } catch (_: Exception) { }
                         stopSelf()
                     } else {
-                        startWakeListening()
+                        handler.postDelayed(retryListening, 350L)
                     }
                 }
                 override fun onPartialResults(partialResults: Bundle?) {}
@@ -144,6 +148,7 @@ class MattyWakeService : Service() {
 
     override fun onDestroy() {
         listening = false
+        handler.removeCallbacksAndMessages(null)
         try { recognizer?.cancel(); recognizer?.destroy() } catch (_: Exception) {}
         recognizer = null
         try { if (wakeLock?.isHeld == true) wakeLock?.release() } catch (_: Exception) {}
