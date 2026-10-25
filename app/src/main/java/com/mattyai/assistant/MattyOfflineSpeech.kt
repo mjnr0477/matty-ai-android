@@ -1,25 +1,19 @@
 package com.mattyai.assistant
 
 import android.content.Context
+import android.content.res.AssetManager
 import android.os.Handler
 import android.os.Looper
-import java.io.BufferedInputStream
-import java.io.BufferedOutputStream
 import java.io.File
 import java.io.FileOutputStream
-import java.net.HttpURLConnection
-import java.net.URL
 import java.util.concurrent.Executors
-import java.util.zip.ZipInputStream
 
 /**
- * App-owned offline speech model manager. Recognition runs locally through Vosk;
- * the model is downloaded once inside Matty and reused without network access.
+ * Installs the bundled Vosk model into app-private storage on first use.
+ * The model is packaged with Matty; no Android speech provider, language pack,
+ * or first-run internet connection is required.
  */
 object MattyOfflineSpeech {
-    private const val MODEL_NAME = "vosk-model-small-en-us-0.15"
-    private const val MODEL_URL = "https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip"
-    private const val MAX_ARCHIVE_BYTES = 120L * 1024L * 1024L
     private val worker = Executors.newSingleThreadExecutor()
     private val main = Handler(Looper.getMainLooper())
     @Volatile private var preparing = false
@@ -39,70 +33,15 @@ object MattyOfflineSpeech {
         }
         worker.execute {
             val result = runCatching {
-                val root = File(app.filesDir, "offline-speech")
-                if (!root.exists() && !root.mkdirs()) error("Cannot create speech-model storage.")
-                val archive = File(root, "model.zip.part")
-                val connection = (URL(MODEL_URL).openConnection() as HttpURLConnection).apply {
-                    connectTimeout = 20000
-                    readTimeout = 120000
-                    instanceFollowRedirects = true
-                    setRequestProperty("User-Agent", "MattyAI-Android")
+                val destination = modelDirectory(app)
+                destination.deleteRecursively()
+                if (!destination.mkdirs()) error("Cannot create offline speech-model storage.")
+                copyAssetFolder(app.assets, "offline_model", destination)
+                if (!isUsable(destination)) {
+                    destination.deleteRecursively()
+                    error("Matty's bundled English speech model is incomplete. Reinstall the app and retry.")
                 }
-                try {
-                    connection.connect()
-                    val code = connection.responseCode
-                    if (code !in 200..299) error("Speech model download failed (HTTP $code). Connect to the internet once and retry.")
-                    val length = connection.contentLengthLong
-                    if (length > MAX_ARCHIVE_BYTES) error("Speech model archive is unexpectedly large.")
-                    BufferedInputStream(connection.inputStream).use { input ->
-                        FileOutputStream(archive).use { output ->
-                            val buffer = ByteArray(32 * 1024)
-                            var total = 0L
-                            while (true) {
-                                val count = input.read(buffer)
-                                if (count < 0) break
-                                total += count
-                                if (total > MAX_ARCHIVE_BYTES) error("Speech model archive exceeds the safe size limit.")
-                                output.write(buffer, 0, count)
-                            }
-                            output.fd.sync()
-                        }
-                    }
-                } finally {
-                    connection.disconnect()
-                }
-                val destination = File(root, "model")
-                if (destination.exists()) destination.deleteRecursively()
-                if (!destination.mkdirs()) error("Cannot prepare speech model folder.")
-                val canonicalRoot = destination.canonicalFile
-                ZipInputStream(BufferedInputStream(archive.inputStream())).use { zip ->
-                    var entry = zip.nextEntry
-                    while (entry != null) {
-                        val output = File(destination, entry.name).canonicalFile
-                        if (output != canonicalRoot && !output.path.startsWith(canonicalRoot.path + File.separator)) {
-                            error("Invalid path in speech model archive.")
-                        }
-                        if (entry.isDirectory) {
-                            if (!output.exists() && !output.mkdirs()) error("Cannot extract speech model.")
-                        } else {
-                            output.parentFile?.let { if (!it.exists() && !it.mkdirs()) error("Cannot extract speech model.") }
-                            BufferedOutputStream(FileOutputStream(output)).use { out ->
-                                val buffer = ByteArray(32 * 1024)
-                                while (true) {
-                                    val count = zip.read(buffer)
-                                    if (count < 0) break
-                                    out.write(buffer, 0, count)
-                                }
-                            }
-                        }
-                        zip.closeEntry()
-                        entry = zip.nextEntry
-                    }
-                }
-                archive.delete()
-                val model = File(destination, MODEL_NAME)
-                if (!isUsable(model)) error("The downloaded speech model is incomplete. Please retry the download.")
-                model.absolutePath
+                destination.absolutePath
             }
             val callbacks: List<(Result<String>) -> Unit>
             synchronized(this) {
@@ -115,7 +54,29 @@ object MattyOfflineSpeech {
     }
 
     private fun modelDirectory(context: Context): File =
-        File(File(context.filesDir, "offline-speech/model"), MODEL_NAME)
+        File(context.filesDir, "offline-speech/model")
+
+    private fun copyAssetFolder(assets: AssetManager, assetPath: String, destination: File) {
+        val entries = assets.list(assetPath) ?: emptyArray()
+        if (entries.isEmpty()) {
+            assets.open(assetPath).use { input ->
+                FileOutputStream(destination).use { output ->
+                    val buffer = ByteArray(32 * 1024)
+                    while (true) {
+                        val count = input.read(buffer)
+                        if (count < 0) break
+                        output.write(buffer, 0, count)
+                    }
+                    output.fd.sync()
+                }
+            }
+            return
+        }
+        if (!destination.exists() && !destination.mkdirs()) error("Cannot create offline model folder.")
+        entries.forEach { name ->
+            copyAssetFolder(assets, "$assetPath/$name", File(destination, name))
+        }
+    }
 
     private fun isUsable(directory: File): Boolean =
         File(directory, "am/final.mdl").isFile &&
