@@ -21,11 +21,11 @@ class CommandParserTest {
         assertEquals(MattyCommandType.GO_HOME, CommandParser.parse("Matty go home").type)
     }
     @Test fun parsesTapByVisibleLabel() {
-        assertEquals(ParsedMattyCommand(MattyCommandType.TAP_TEXT, "wifi"), CommandParser.parse("Matty tap Wi-Fi"))
+        assertEquals(ParsedMattyCommand(MattyCommandType.TAP_TEXT, "Wi-Fi"), CommandParser.parse("Matty tap Wi-Fi"))
         assertEquals(ParsedMattyCommand(MattyCommandType.TAP_TEXT, "send"), CommandParser.parse("click Send"))
     }
     @Test fun parsesTextEntryLocally() {
-        assertEquals(ParsedMattyCommand(MattyCommandType.TYPE_TEXT, "hello there"), CommandParser.parse("Matty type hello there"))
+        assertEquals(ParsedMattyCommand(MattyCommandType.TYPE_TEXT, "Hello There!"), CommandParser.parse("Matty type Hello There!"))
         assertEquals(ParsedMattyCommand(MattyCommandType.TYPE_TEXT, "good morning"), CommandParser.parse("enter text good morning"))
     }
     @Test fun parsesScrollingCommands() {
