@@ -14,6 +14,7 @@ import android.os.Handler
 import android.os.Looper
 import android.os.Bundle
 import android.provider.Settings
+import android.net.Uri
 import android.app.KeyguardManager
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
@@ -285,6 +286,8 @@ class MainActivity : Activity() {
             MattyCommandType.START_PLAYBACK -> startPlayback()
             MattyCommandType.OPEN_MUSIC -> openMusic()
             MattyCommandType.OPEN_APP -> openApp(parsed.argument)
+            MattyCommandType.INSTALL_APP -> openStoreSearch(parsed.argument)
+            MattyCommandType.SEARCH_WEB -> searchWeb(parsed.argument)
             MattyCommandType.OPEN_APP_AND_CLICK_LINK -> openAppThenClickLink(parsed.argument)
             MattyCommandType.CLICK_FIRST_LINK -> performOnUnderlyingApp(
                 success = "Opened the first visible link.",
@@ -387,6 +390,54 @@ class MainActivity : Activity() {
         val likely = findLaunchIntent(listOf("Spotify", "YouTube Music", "Music", "YouTube", "VLC"))
         if (likely != null) try { startActivity(likely); status.text = "Opened a music app. Choose a track there."; return } catch (_: Exception) { }
         status.text = "No compatible music app was found. Install a music player and try again."
+    }
+
+    /**
+     * Installation is intentionally handed to the official store/system UI. Matty must not
+     * silently install packages or bypass Android's user consent and security checks.
+     */
+    private fun openStoreSearch(appName: String) {
+        val cleaned = appName.trim()
+        if (cleaned.isBlank()) {
+            status.text = "Tell me the app name, for example: “Matty, install WhatsApp”."
+            return
+        }
+        val marketIntent = Intent(Intent.ACTION_VIEW, Uri.parse("market://search?q=" + Uri.encode(cleaned)))
+        val webIntent = Intent(
+            Intent.ACTION_VIEW,
+            Uri.parse("https://play.google.com/store/search?q=" + Uri.encode(cleaned) + "&c=apps")
+        )
+        try {
+            if (marketIntent.resolveActivity(packageManager) != null) {
+                startActivity(marketIntent)
+                status.text = "Opening the app store to find $cleaned. Review the app and tap Install."
+            } else {
+                startActivity(webIntent)
+                status.text = "Opening Google Play search for $cleaned. Review the app and tap Install."
+            }
+        } catch (_: Exception) {
+            try {
+                startActivity(Intent.createChooser(webIntent, "Find app to install"))
+                status.text = "Choose a store or browser to find $cleaned."
+            } catch (_: Exception) {
+                status.text = "I couldn't open an app store. Check that a store or browser is installed."
+            }
+        }
+    }
+
+    private fun searchWeb(query: String) {
+        val cleaned = query.trim()
+        if (cleaned.isBlank()) {
+            status.text = "Tell me what you want to search for."
+            return
+        }
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/search?q=" + Uri.encode(cleaned)))
+        try {
+            startActivity(intent)
+            status.text = "Searching the web for: $cleaned"
+        } catch (_: Exception) {
+            status.text = "No browser or search app is available. Web search needs an internet connection."
+        }
     }
 
     private fun openAppThenClickLink(name: String) {
