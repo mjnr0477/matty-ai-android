@@ -282,6 +282,11 @@ class MainActivity : Activity() {
             MattyCommandType.START_PLAYBACK -> startPlayback()
             MattyCommandType.OPEN_MUSIC -> openMusic()
             MattyCommandType.OPEN_APP -> openApp(parsed.argument)
+            MattyCommandType.CLICK_FIRST_LINK -> performOnUnderlyingApp(
+                success = "Opened the first visible link.",
+                failure = "Couldn't find a visible link on the current screen.",
+                action = { it.clickFirstLink() }
+            )
             MattyCommandType.TAP_TEXT -> performOnUnderlyingApp(
                 success = "Tapped “${parsed.argument}”.",
                 failure = "Couldn't find a tappable control labelled “${parsed.argument}”.",
