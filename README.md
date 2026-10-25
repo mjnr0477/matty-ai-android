@@ -8,7 +8,7 @@ Matty AI is an independent native Android project. It is separate from Dream Edu
 - Offline-only wake-phrase service prototype using Android on-device speech recognition, a microphone foreground-service notification, and a short screen-wake attempt. It refuses to use cloud recognition for speech.
 - One primary setup button; after Android permissions are approved, Matty attempts to listen for “Matty” and then accept a command after the user unlocks the phone.
 - Local commands to open installed apps and Wi-Fi / mobile-data / Bluetooth / general settings, adjust media volume, open music apps, navigate Home / Back / notifications / Quick Settings, tap visible controls by label, enter text into an editable field, and scroll.
-- Accessibility is opt-in. Matty inspects the current accessibility node tree in memory only when carrying out an explicitly requested tap, text-entry, or scroll action; it does not save or transmit screen contents.
+- Accessibility is opt-in. For tap, text-entry, and scroll commands, Matty returns to the app underneath before performing the requested action so it does not accidentally target its own setup screen. It inspects the current accessibility node tree in memory only for that action; it does not save or transmit screen contents.
 - Deterministic local command parser with unit tests for supported commands and unknown-command safety.
 - GitHub Actions runs parser tests and Android lint, then builds a debug APK plus unsigned release APK/AAB artifacts. Unsigned release artifacts still need secure signing before distribution.
 
