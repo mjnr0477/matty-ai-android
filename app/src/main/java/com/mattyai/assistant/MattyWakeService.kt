@@ -11,16 +11,17 @@ import android.net.Uri
 import android.provider.Settings
 import android.media.AudioManager
 import android.os.Build
-import android.os.Bundle
 import android.os.IBinder
 import android.os.Handler
 import android.os.Looper
-import android.speech.RecognitionListener
-import android.speech.RecognizerIntent
-import android.speech.SpeechRecognizer
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import java.util.Locale
+import org.json.JSONObject
+import org.vosk.Model
+import org.vosk.Recognizer
+import org.vosk.android.SpeechService
+import org.vosk.android.RecognitionListener
 
 /**
  * Visible, user-started microphone foreground service. This is an experimental
@@ -30,8 +31,11 @@ import java.util.Locale
 class MattyWakeService : Service() {
     private enum class ListenMode { WAKE_PHRASE, COMMAND }
 
-    private var recognizer: SpeechRecognizer? = null
+    private var speechService: SpeechService? = null
+    private var model: Model? = null
+    private var modelLoading = false
     private var listening = false
+    private var handlingUtterance = false
     private var retryCount = 0
     private var mode = ListenMode.WAKE_PHRASE
     private var tts: TextToSpeech? = null
@@ -84,81 +88,107 @@ class MattyWakeService : Service() {
     }
 
     private fun startListening() {
-        if (listening) return
+        if (listening || modelLoading) return
         handler.removeCallbacks(retryListening)
-        val offlineAvailable = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
-            SpeechRecognizer.isOnDeviceRecognitionAvailable(this)
-        val fallbackAccepted = getSharedPreferences("matty_settings", MODE_PRIVATE)
-            .getBoolean("online_speech_fallback_accepted", false)
-        if (!offlineAvailable && !fallbackAccepted) {
-            updateNotification("Speech unavailable. Open Matty to choose a speech-recognition option.")
+        if (checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            updateNotification("Microphone permission is required. Open Matty to grant it.")
             stopSelf()
             return
         }
-        try {
-            recognizer?.destroy()
-            recognizer = if (offlineAvailable) SpeechRecognizer.createOnDeviceSpeechRecognizer(this)
-                else SpeechRecognizer.createSpeechRecognizer(this)
-            recognizer?.setRecognitionListener(object : RecognitionListener {
-                override fun onReadyForSpeech(params: Bundle?) { listening = true; retryCount = 0 }
-                override fun onBeginningOfSpeech() {}
-                override fun onRmsChanged(rmsdB: Float) {}
-                override fun onBufferReceived(buffer: ByteArray?) {}
-                override fun onEndOfSpeech() { listening = false }
-                override fun onError(error: Int) {
-                    listening = false
-                    val delayMs = minOf(900L * (1 shl retryCount.coerceAtMost(4)).toLong(), 15_000L)
-                    retryCount = (retryCount + 1).coerceAtMost(4)
-                    handler.postDelayed(retryListening, delayMs)
-                }
-                override fun onResults(results: Bundle?) {
-                    listening = false
-                    val heard = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                        ?.firstOrNull().orEmpty().trim()
-                    if (mode == ListenMode.WAKE_PHRASE) {
-                        val wake = CommandParser.extractWakeCommand(heard)
-                        if (wake.detected) {
-                            if (wake.command.isNotBlank()) {
-                                mode = ListenMode.WAKE_PHRASE
-                                val response = executeSupportedBackgroundCommand(wake.command)
-                                updateNotification(response)
-                                speakThenResume(response)
-                            } else {
-                                mode = ListenMode.COMMAND
-                                updateNotification("Matty heard you. Say a command now.")
-                                speakThenResume("I'm listening. What should I do?")
-                            }
-                        } else {
-                            handler.postDelayed(retryListening, 350L)
-                        }
-                    } else {
-                        mode = ListenMode.WAKE_PHRASE
-                        if (heard.isBlank()) {
-                            updateNotification("Didn't catch that. Listening for “Matty” again.")
-                            handler.postDelayed(retryListening, 500L)
-                        } else {
-                            val response = executeSupportedBackgroundCommand(heard)
-                            updateNotification(response)
-                            speakThenResume(response)
-                        }
+        if (model == null) {
+            modelLoading = true
+            updateNotification("Preparing Matty's built-in offline speech model. First setup needs internet once.")
+            MattyOfflineSpeech.prepare(this) { result ->
+                modelLoading = false
+                result.onSuccess { path ->
+                    try {
+                        model = Model(path)
+                        updateNotification("Offline speech is ready. Listening for Matty.")
+                        startListening()
+                    } catch (e: Exception) {
+                        updateNotification("Could not load offline speech model: ${e.message ?: "unknown error"}")
+                        stopSelf()
                     }
+                }.onFailure { error ->
+                    updateNotification("Offline speech setup failed: ${error.message ?: "connect once and retry"}")
+                    stopSelf()
                 }
-                override fun onPartialResults(partialResults: Bundle?) {}
-                override fun onEvent(eventType: Int, params: Bundle?) {}
-            })
-            val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-                putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                putExtra(RecognizerIntent.EXTRA_LANGUAGE, selectedVoiceLocale().toLanguageTag())
-                putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, offlineAvailable)
-                putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false)
-                putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
             }
-            recognizer?.startListening(intent)
-        } catch (_: Exception) {
-            listening = false
-            updateNotification("Voice listening stopped by Android. Open Matty to restart it.")
-            stopSelf()
+            return
         }
+        try {
+            val recognizer = Recognizer(model, 16000.0f)
+            speechService = SpeechService(recognizer, 16000.0f)
+            handlingUtterance = false
+            listening = speechService?.startListening(object : RecognitionListener {
+                override fun onPartialResult(hypothesis: String?) = Unit
+                override fun onResult(hypothesis: String?) { consumeRecognition(hypothesis) }
+                override fun onFinalResult(hypothesis: String?) { consumeRecognition(hypothesis) }
+                override fun onError(exception: Exception?) {
+                    listening = false
+                    stopSpeechEngine()
+                    updateNotification("Offline speech error: ${exception?.message ?: "microphone unavailable"}. Retrying.")
+                    handler.postDelayed(retryListening, 1500L)
+                }
+                override fun onTimeout() {
+                    listening = false
+                    stopSpeechEngine()
+                    handler.postDelayed(retryListening, 250L)
+                }
+            }) == true
+            if (!listening) {
+                stopSpeechEngine()
+                updateNotification("Could not start microphone capture. Check microphone access.")
+                handler.postDelayed(retryListening, 1500L)
+            } else {
+                updateNotification("Matty is listening offline. Say “Matty” and your command.")
+            }
+        } catch (e: Exception) {
+            listening = false
+            stopSpeechEngine()
+            updateNotification("Could not start offline speech: ${e.message ?: "microphone unavailable"}")
+            handler.postDelayed(retryListening, 2500L)
+        }
+    }
+
+    private fun consumeRecognition(hypothesis: String?) {
+        if (handlingUtterance) return
+        val heard = try {
+            JSONObject(hypothesis.orEmpty()).optString("text").trim()
+        } catch (_: Exception) { "" }
+        if (heard.isBlank()) return
+        handlingUtterance = true
+        listening = false
+        stopSpeechEngine()
+        if (mode == ListenMode.WAKE_PHRASE) {
+            val wake = CommandParser.extractWakeCommand(heard)
+            if (!wake.detected) {
+                handlingUtterance = false
+                handler.postDelayed(retryListening, 250L)
+                return
+            }
+            if (wake.command.isBlank()) {
+                mode = ListenMode.COMMAND
+                updateNotification("Matty heard you. Say a command now.")
+                speakThenResume("I'm listening. What should I do?")
+            } else {
+                mode = ListenMode.WAKE_PHRASE
+                val response = executeSupportedBackgroundCommand(wake.command)
+                updateNotification(response)
+                speakThenResume(response)
+            }
+        } else {
+            mode = ListenMode.WAKE_PHRASE
+            val response = executeSupportedBackgroundCommand(heard)
+            updateNotification(response)
+            speakThenResume(response)
+        }
+    }
+
+    private fun stopSpeechEngine() {
+        try { speechService?.stop() } catch (_: Exception) { }
+        try { speechService?.shutdown() } catch (_: Exception) { }
+        speechService = null
     }
 
     private fun executeSupportedBackgroundCommand(raw: String): String {
@@ -265,6 +295,7 @@ class MattyWakeService : Service() {
     private fun speakThenResume(message: String) {
         handler.removeCallbacks(retryListening)
         listening = false
+        stopSpeechEngine()
         val generation = ++speechGeneration
         activeUtteranceId = "matty-result-$generation"
         resumeAfterSpeech = true
@@ -289,6 +320,7 @@ class MattyWakeService : Service() {
         if (!resumeAfterSpeech) return
         resumeAfterSpeech = false
         activeUtteranceId = null
+        handlingUtterance = false
         handler.removeCallbacks(retryListening)
         handler.postDelayed(retryListening, 250L)
     }
@@ -328,8 +360,9 @@ class MattyWakeService : Service() {
         listening = false
         resumeAfterSpeech = false
         handler.removeCallbacksAndMessages(null)
-        try { recognizer?.cancel(); recognizer?.destroy() } catch (_: Exception) {}
-        recognizer = null
+        stopSpeechEngine()
+        try { model?.close() } catch (_: Exception) {}
+        model = null
         try { tts?.stop(); tts?.shutdown() } catch (_: Exception) {}
         tts = null
         super.onDestroy()
