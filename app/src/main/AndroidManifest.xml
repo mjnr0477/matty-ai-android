@@ -31,7 +31,8 @@
     </queries>
     <application
         android:allowBackup="false"
-        android:label="Matty AI"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@android:style/Theme.Material.Light.NoActionBar">
         <activity android:name=".MainActivity" android:exported="true">
@@ -42,7 +43,7 @@
         </activity>
         <service
             android:name=".MattyWakeService"
-            android:label="Matty offline voice wake"
+            android:label="Android hands-free voice"
             android:exported="false"
             android:foregroundServiceType="microphone" />
         <service
@@ -67,7 +68,7 @@
         </service>
         <service
             android:name=".MattyAccessibilityService"
-            android:label="Matty cross-app voice control"
+            android:label="Android cross-app voice control"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
             android:exported="true">
             <intent-filter>
