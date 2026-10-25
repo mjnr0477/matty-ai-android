@@ -499,7 +499,7 @@ class MainActivity : Activity() {
                     status.text = "Matty could not start its built-in offline speech engine: ${e.message ?: "microphone unavailable"}"
                 }
             }.onFailure { error ->
-                status.text = "Matty needs an internet connection once to install its built-in offline English model: ${error.message ?: "download failed"}"
+                status.text = "Matty could not prepare its bundled offline English model: ${error.message ?: "download failed"}"
             }
         }
     }
