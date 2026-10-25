@@ -1,6 +1,6 @@
-# Matty AI — native Android hands-free assistant
+# Android — native Android hands-free assistant
 
-Matty AI is an independent Android project, separate from Dream Education and Dream Wi-Fi. The main screen is designed around one **Enable hands-free / Disable hands-free** control and an in-app voice-language selector.
+Android is an independent Android project, separate from Dream Education and Dream Wi-Fi. The main screen is designed around one **Enable hands-free / Disable hands-free** control and an in-app voice-language selector.
 
 ## Build and download
 
@@ -11,9 +11,9 @@ The artifact is a test build until the device checklist below passes. A successf
 
 ## First-time setup
 
-1. Install the APK and open Matty AI.
+1. Install the APK and open Android.
 2. Tap **Enable hands-free** and grant microphone permission. Matty explains why cross-app access is needed and asks you to review the disclosure.
-3. In Android Accessibility settings, explicitly enable Matty's **cross-app voice control** service. This permission is necessary for tapping, typing, scrolling, swiping, and long-pressing controls in other apps.
+3. In Android Accessibility settings, explicitly enable Android's **cross-app voice control** service. This permission is necessary for tapping, typing, scrolling, swiping, and long-pressing controls in other apps.
 4. Return to Matty. The ongoing notification indicates that the background microphone service is running. Keep it enabled while using hands-free.
 5. Matty bundles its own compact English speech model in the APK and copies it into app-private storage on first use. No separate Android speech pack or internet connection is required at runtime. English (US) is the currently integrated recognition model. The APK is larger because it includes the model.
 
