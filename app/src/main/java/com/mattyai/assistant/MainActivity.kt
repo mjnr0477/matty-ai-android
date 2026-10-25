@@ -139,21 +139,6 @@ class MainActivity : Activity() {
         }
     }
 
-    private fun requestOnlineSpeechFallbackConsent(onAccepted: () -> Unit) {
-        AlertDialog.Builder(this)
-            .setTitle("Allow online speech recognition?")
-            .setMessage("This phone does not provide an available on-device speech recognizer. You can install an offline speech service and language pack, or let Matty use Android's standard speech recognizer. Depending on your device and provider, audio may be sent to a speech service for processing. Continue only if you are comfortable with that.")
-            .setNegativeButton("Not now") { _, _ ->
-                if (::status.isInitialized) status.text = "Speech is unavailable until you install an offline speech service or allow standard speech recognition."
-            }
-            .setPositiveButton("Allow standard speech") { _, _ ->
-                getSharedPreferences("matty_settings", MODE_PRIVATE).edit()
-                    .putBoolean("online_speech_fallback_accepted", true).apply()
-                onAccepted()
-            }
-            .show()
-    }
-
     private fun buildUi() {
         val page = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
