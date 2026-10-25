@@ -13,6 +13,10 @@ permissions:
 jobs:
   build-android:
     runs-on: ubuntu-latest
+    env:
+      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
     steps:
       - name: Check out source
         uses: actions/checkout@v4
@@ -32,6 +36,20 @@ jobs:
           test -x "$SDKMANAGER"
           yes | "$SDKMANAGER" --licenses >/dev/null || true
           "$SDKMANAGER" 'platforms;android-35' 'build-tools;35.0.0'
+      - name: Configure release signing key
+        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$ANDROID_KEYSTORE_PASSWORD" || { echo "ANDROID_KEYSTORE_PASSWORD secret is missing"; exit 1; }
+          test -n "$ANDROID_KEY_ALIAS" || { echo "ANDROID_KEY_ALIAS secret is missing"; exit 1; }
+          test -n "$ANDROID_KEY_PASSWORD" || { echo "ANDROID_KEY_PASSWORD secret is missing"; exit 1; }
+          KEYSTORE_PATH="$RUNNER_TEMP/matty-release.jks"
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_PATH"
+          test -s "$KEYSTORE_PATH"
+          echo "ANDROID_KEYSTORE_PATH=$KEYSTORE_PATH" >> "$GITHUB_ENV"
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
@@ -42,14 +60,23 @@ jobs:
         run: gradle lintDebug
       - name: Build debug APK
         run: gradle assembleDebug
-      - name: Build unsigned release APK and AAB
+      - name: Build release APK and AAB
         run: gradle assembleRelease bundleRelease
+      - name: Verify release APK signing
+        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="app/build/outputs/apk/release/app-release.apk"
+          test -s "$APK"
+          APKSIGNER="${ANDROID_HOME:-/usr/local/lib/android/sdk}/build-tools/35.0.0/apksigner"
+          "$APKSIGNER" verify --verbose "$APK"
       - name: Upload Android build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: matty-ai-android-builds
           path: |
             app/build/outputs/apk/debug/app-debug.apk
-            app/build/outputs/apk/release/app-release-unsigned.apk
+            app/build/outputs/apk/release/*.apk
             app/build/outputs/bundle/release/app-release.aab
           if-no-files-found: error
