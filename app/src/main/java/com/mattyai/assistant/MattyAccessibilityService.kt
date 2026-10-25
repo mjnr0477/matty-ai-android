@@ -31,21 +31,31 @@ class MattyAccessibilityService : AccessibilityService() {
 
         fun isActive(): Boolean = activeService != null
 
+        private fun hasConsent(service: MattyAccessibilityService): Boolean =
+            service.getSharedPreferences("matty_privacy", MODE_PRIVATE)
+                .getBoolean("cross_app_voice_control_disclosure_accepted", false)
+
+        private fun consentMessage(service: MattyAccessibilityService): String? =
+            if (hasConsent(service)) null else "Open Matty and accept the cross-app voice-control disclosure before using these actions."
+
 
         fun goBack(): String {
             val service = activeService ?: return "Enable Matty cross-app voice control in Accessibility settings first."
+            consentMessage(service)?.let { return it }
             return if (service.performGlobalAction(GLOBAL_ACTION_BACK)) "Went back."
                 else "Android did not allow the Back action."
         }
 
         fun goHome(): String {
             val service = activeService ?: return "Enable Matty cross-app voice control in Accessibility settings first."
+            consentMessage(service)?.let { return it }
             return if (service.performGlobalAction(GLOBAL_ACTION_HOME)) "Went to the Home screen."
                 else "Android did not allow the Home action."
         }
 
         fun tapVisibleLabel(label: String): String {
             val service = activeService ?: return "Enable Matty cross-app voice control in Accessibility settings first."
+            consentMessage(service)?.let { return it }
             val cleaned = label.trim()
             if (cleaned.isEmpty()) return "Tell Matty the exact visible button or label to tap."
             val root = service.rootInActiveWindow ?: return "No active app screen is available to Matty."
@@ -70,6 +80,7 @@ class MattyAccessibilityService : AccessibilityService() {
 
         fun typeIntoFocusedField(value: String): String {
             val service = activeService ?: return "Enable Matty cross-app voice control in Accessibility settings first."
+            consentMessage(service)?.let { return it }
             val root = service.rootInActiveWindow ?: return "No active app screen is available to Matty."
             val focused = try { root.findFocus(AccessibilityNodeInfo.FOCUS_INPUT) } catch (_: Exception) { null }
             if (focused == null || !focused.isEditable) {
@@ -87,6 +98,7 @@ class MattyAccessibilityService : AccessibilityService() {
 
         fun scroll(down: Boolean): String {
             val service = activeService ?: return "Enable Matty cross-app voice control in Accessibility settings first."
+            consentMessage(service)?.let { return it }
             val root = service.rootInActiveWindow ?: return "No active app screen is available to Matty."
             val action = if (down) AccessibilityNodeInfo.ACTION_SCROLL_FORWARD else AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD
             val candidates = mutableListOf<AccessibilityNodeInfo>()
