@@ -16,6 +16,11 @@ object CommandParser {
             .replace(Regex("^(hey\\s+)?matty[ ,]*"), "")
             .trim()
         return when {
+            command.startsWith("tap ") || command.startsWith("click ") -> ParsedMattyCommand(MattyCommandType.TAP_TEXT, command.substringAfter(" ").trim())
+            command.startsWith("enter text ") -> ParsedMattyCommand(MattyCommandType.TYPE_TEXT, command.removePrefix("enter text ").trim())
+            command.startsWith("type ") -> ParsedMattyCommand(MattyCommandType.TYPE_TEXT, command.removePrefix("type ").trim())
+            command.contains("scroll down") || command == "swipe up" -> ParsedMattyCommand(MattyCommandType.SCROLL_DOWN)
+            command.contains("scroll up") || command == "swipe down" -> ParsedMattyCommand(MattyCommandType.SCROLL_UP)
             command.contains("wifi") || command.contains("wi-fi") -> ParsedMattyCommand(MattyCommandType.OPEN_WIFI_SETTINGS)
             command.contains("mobile data") || command.contains("cellular data") || command == "data" -> ParsedMattyCommand(MattyCommandType.OPEN_MOBILE_DATA_SETTINGS)
             command.contains("bluetooth") -> ParsedMattyCommand(MattyCommandType.OPEN_BLUETOOTH_SETTINGS)
@@ -26,11 +31,6 @@ object CommandParser {
             command.contains("go home") || command == "home" -> ParsedMattyCommand(MattyCommandType.GO_HOME)
             command.contains("volume down") || command.contains("turn down volume") || command.contains("lower volume") -> ParsedMattyCommand(MattyCommandType.VOLUME_DOWN)
             command.contains("volume up") || command.contains("turn up volume") || command.contains("raise volume") -> ParsedMattyCommand(MattyCommandType.VOLUME_UP)
-            command.startsWith("tap ") || command.startsWith("click ") -> ParsedMattyCommand(MattyCommandType.TAP_TEXT, command.substringAfter(" ").trim())
-            command.startsWith("enter text ") -> ParsedMattyCommand(MattyCommandType.TYPE_TEXT, command.removePrefix("enter text ").trim())
-            command.startsWith("type ") -> ParsedMattyCommand(MattyCommandType.TYPE_TEXT, command.removePrefix("type ").trim())
-            command.contains("scroll down") || command == "swipe up" -> ParsedMattyCommand(MattyCommandType.SCROLL_DOWN)
-            command.contains("scroll up") || command == "swipe down" -> ParsedMattyCommand(MattyCommandType.SCROLL_UP)
             command.contains("start this song") || command == "start song" -> ParsedMattyCommand(MattyCommandType.START_PLAYBACK)
             command.contains("play music") || command.contains("start music") || command.startsWith("play ") || command.contains("open music") -> ParsedMattyCommand(MattyCommandType.OPEN_MUSIC)
             command.startsWith("open ") || command.startsWith("launch ") || command.startsWith("start ") ->
