@@ -490,6 +490,8 @@ class MainActivity : Activity() {
             MattyCommandType.TYPE_TEXT -> runCrossAppAction { MattyAccessibilityService.typeIntoFocusedField(parsed.argument) }
             MattyCommandType.SCROLL_UP -> runCrossAppAction { MattyAccessibilityService.scroll(false) }
             MattyCommandType.SCROLL_DOWN -> runCrossAppAction { MattyAccessibilityService.scroll(true) }
+            MattyCommandType.SWIPE_LEFT -> runCrossAppAction { MattyAccessibilityService.swipeLeft() }
+            MattyCommandType.SWIPE_RIGHT -> runCrossAppAction { MattyAccessibilityService.swipeRight() }
             MattyCommandType.CLICK_FIRST_LINK ->
                 status.text = "Say 'tap' followed by the exact visible link label so Matty can target the right item."
             MattyCommandType.UNKNOWN -> status.text = "I heard you, but that action is not supported yet."
