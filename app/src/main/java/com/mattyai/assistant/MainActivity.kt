@@ -2,6 +2,7 @@ package com.mattyai.assistant
 
 import android.Manifest
 import android.app.Activity
+import android.app.AlertDialog
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
@@ -24,6 +25,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.Button
+import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
@@ -137,7 +139,7 @@ class MainActivity : Activity() {
         page.addView(text("MEET YOUR PERSONAL ASSISTANT", 11f, purple, true), params(bottom = 8))
         val headline = text("Just say it.\nMatty gets it done.", 34f, ink, true).apply { setLineSpacing(dp(1).toFloat(), 1f) }
         page.addView(headline, params(bottom = 10))
-        page.addView(text("Open apps, find music and navigate phone settings with simple voice commands — with offline-first command handling.", 15f, muted, false), params(bottom = 20))
+        page.addView(text("Use voice or type a command to open apps, adjust media volume, search the web, and open phone settings.", 15f, muted, false), params(bottom = 20))
 
         val hero = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER; setPadding(dp(18), dp(22), dp(18), dp(22))
@@ -175,9 +177,28 @@ class MainActivity : Activity() {
             setOnClickListener { startActivity(Intent(this@MainActivity, BluetoothActivity::class.java)) }
         }
         page.addView(bluetoothButton, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(50)).apply {
+            bottomMargin = dp(10)
+        })
+
+        val talkButton = Button(this).apply {
+            text = "Tap to talk"; isAllCaps = false; textSize = 15f
+            setTextColor(Color.WHITE); background = rounded(ink, 16)
+            setOnClickListener { startListening() }
+        }
+        page.addView(talkButton, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(50)).apply {
+            bottomMargin = dp(10)
+        })
+
+        val typeButton = Button(this).apply {
+            text = "Type a command"; isAllCaps = false; textSize = 14f
+            setTextColor(ink); background = rounded(Color.rgb(236, 237, 246), 16)
+            setOnClickListener { showTextCommandDialog() }
+        }
+        page.addView(typeButton, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(48)).apply {
             bottomMargin = dp(12)
         })
 
+        page.addView(text("Try: open Bluetooth settings · open Wi-Fi settings · open WhatsApp · volume up · search for weather", 12f, muted, false), params(bottom = 6))
         page.addView(text("PRIVACY FIRST · Commands are handled on your phone where possible. Offline speech depends on your Android speech service and downloaded language packs.", 11f, muted, false), params(top = 14))
         setContentView(scroll)
     }
@@ -221,6 +242,30 @@ class MainActivity : Activity() {
             }
             continueAccessSetup()
         }
+    }
+
+    private fun showTextCommandDialog() {
+        val commandInput = EditText(this).apply {
+            hint = "e.g. open Bluetooth settings"
+            setSingleLine(false)
+            minLines = 1
+            maxLines = 3
+            setPadding(dp(14), dp(12), dp(14), dp(12))
+        }
+        AlertDialog.Builder(this)
+            .setTitle("Give Matty a command")
+            .setMessage("Matty currently supports a limited set of phone commands. It is not yet a general AI assistant.")
+            .setView(commandInput)
+            .setNegativeButton("Cancel", null)
+            .setPositiveButton("Run command") { _, _ ->
+                val command = commandInput.text?.toString().orEmpty().trim()
+                if (command.isBlank()) {
+                    status.text = "Type a command first."
+                } else {
+                    handleCommand(command)
+                }
+            }
+            .show()
     }
 
     private fun startListening() {
