@@ -31,6 +31,19 @@ class MattyAccessibilityService : AccessibilityService() {
 
         fun isActive(): Boolean = activeService != null
 
+
+        fun goBack(): String {
+            val service = activeService ?: return "Enable Matty cross-app voice control in Accessibility settings first."
+            return if (service.performGlobalAction(GLOBAL_ACTION_BACK)) "Went back."
+                else "Android did not allow the Back action."
+        }
+
+        fun goHome(): String {
+            val service = activeService ?: return "Enable Matty cross-app voice control in Accessibility settings first."
+            return if (service.performGlobalAction(GLOBAL_ACTION_HOME)) "Went to the Home screen."
+                else "Android did not allow the Home action."
+        }
+
         fun tapVisibleLabel(label: String): String {
             val service = activeService ?: return "Enable Matty cross-app voice control in Accessibility settings first."
             val cleaned = label.trim()
