@@ -9,8 +9,19 @@ enum class MattyCommandType {
 }
 
 data class ParsedMattyCommand(val type: MattyCommandType, val argument: String = "")
+data class WakePhraseMatch(val detected: Boolean, val command: String)
 
 object CommandParser {
+    fun extractWakeCommand(raw: String): WakePhraseMatch {
+        val match = Regex("(?i)\\bmatty\\b").find(raw)
+            ?: return WakePhraseMatch(false, "")
+        val command = raw.substring(match.range.last + 1)
+            .trim()
+            .trimStart(',', ':', ';', '-', ' ')
+            .trim()
+        return WakePhraseMatch(true, command)
+    }
+
     fun parse(raw: String): ParsedMattyCommand {
         val original = raw.trim().replace(Regex("(?i)^(hey\\s+)?matty[ ,]*"), "").trim()
         val command = original.lowercase()
