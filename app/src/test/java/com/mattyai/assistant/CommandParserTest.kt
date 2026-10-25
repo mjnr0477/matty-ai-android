@@ -109,6 +109,11 @@ class CommandParserTest {
         assertEquals(MattyCommandType.OPEN_NOTIFICATIONS, CommandParser.parse("open notifications").type)
         assertEquals(MattyCommandType.OPEN_QUICK_SETTINGS, CommandParser.parse("open quick settings").type)
     }
+
+    @Test fun parsesHorizontalSwipes() {
+        assertEquals(MattyCommandType.SWIPE_LEFT, CommandParser.parse("Matty swipe left").type)
+        assertEquals(MattyCommandType.SWIPE_RIGHT, CommandParser.parse("swipe right").type)
+    }
     @Test fun unknownCommandsDoNotCreateArbitraryActions() {
         assertEquals(MattyCommandType.UNKNOWN, CommandParser.parse("transfer all my money").type)
         assertEquals(MattyCommandType.UNKNOWN, CommandParser.parse("Matty do not open Wi-Fi").type)
