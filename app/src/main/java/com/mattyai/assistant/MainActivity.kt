@@ -223,7 +223,8 @@ class MainActivity : Activity() {
             background = rounded(purple, 16)
             setOnClickListener { requestDefaultAssistant() }
         }
-        assistantButton.visibility = View.GONE
+        assistantButton.visibility = View.VISIBLE
+        page.addView(assistantButton, params(bottom = 10))
 
         val crossAppButton = Button(this).apply {
             text = "Enable hands-free controls in other apps"
