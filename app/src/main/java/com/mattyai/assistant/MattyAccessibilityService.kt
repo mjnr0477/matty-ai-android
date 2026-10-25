@@ -1,6 +1,7 @@
 package com.mattyai.assistant
 
 import android.accessibilityservice.AccessibilityService
+import android.content.Context
 import android.os.Bundle
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
@@ -32,7 +33,7 @@ class MattyAccessibilityService : AccessibilityService() {
         fun isActive(): Boolean = activeService != null
 
         private fun hasConsent(service: MattyAccessibilityService): Boolean =
-            service.getSharedPreferences("matty_privacy", MODE_PRIVATE)
+            service.getSharedPreferences("matty_privacy", Context.MODE_PRIVATE)
                 .getBoolean("cross_app_voice_control_disclosure_accepted", false)
 
         private fun consentMessage(service: MattyAccessibilityService): String? =
@@ -42,14 +43,14 @@ class MattyAccessibilityService : AccessibilityService() {
         fun goBack(): String {
             val service = activeService ?: return "Enable Matty cross-app voice control in Accessibility settings first."
             consentMessage(service)?.let { return it }
-            return if (service.performGlobalAction(GLOBAL_ACTION_BACK)) "Went back."
+            return if (service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK)) "Went back."
                 else "Android did not allow the Back action."
         }
 
         fun goHome(): String {
             val service = activeService ?: return "Enable Matty cross-app voice control in Accessibility settings first."
             consentMessage(service)?.let { return it }
-            return if (service.performGlobalAction(GLOBAL_ACTION_HOME)) "Went to the Home screen."
+            return if (service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_HOME)) "Went to the Home screen."
                 else "Android did not allow the Home action."
         }
 
