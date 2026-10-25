@@ -3,7 +3,6 @@ package com.mattyai.assistant
 import android.accessibilityservice.AccessibilityService
 import android.content.Context
 import android.provider.Settings
-import android.text.TextUtils
 import android.view.accessibility.AccessibilityEvent
 
 internal enum class AccessibilityServiceAction { BACK, HOME, NOTIFICATIONS, QUICK_SETTINGS }
@@ -31,10 +30,7 @@ class MattyAccessibilityService : AccessibilityService() {
         fun isEnabled(context: Context): Boolean {
             val expected = "${context.packageName}/${MattyAccessibilityService::class.java.name}"
             val enabled = Settings.Secure.getString(context.contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES) ?: return false
-            return TextUtils.SimpleStringSplitter(':').run {
-                setString(enabled)
-                any { it.equals(expected, ignoreCase = true) }
-            }
+            return enabled.split(':').any { it.equals(expected, ignoreCase = true) }
         }
     }
 }
