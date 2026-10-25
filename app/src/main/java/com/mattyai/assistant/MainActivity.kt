@@ -197,16 +197,17 @@ class MainActivity : Activity() {
         if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             beginAccessSetup(); return
         }
-        if (!SpeechRecognizer.isRecognitionAvailable(this)) {
-            status.text = "Speech recognition isn't available. Install or enable a speech service, then try again."
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || !SpeechRecognizer.isOnDeviceRecognitionAvailable(this)) {
+            status.text = "Offline speech recognition is unavailable. Install an on-device speech service and download your language pack; Matty will not use cloud speech."
             return
         }
         recognizer?.destroy()
         recognizer = try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && SpeechRecognizer.isOnDeviceRecognitionAvailable(this))
-                SpeechRecognizer.createOnDeviceSpeechRecognizer(this)
-            else SpeechRecognizer.createSpeechRecognizer(this)
-        } catch (_: Exception) { SpeechRecognizer.createSpeechRecognizer(this) }
+            SpeechRecognizer.createOnDeviceSpeechRecognizer(this)
+        } catch (_: Exception) {
+            status.text = "Couldn't start on-device speech recognition. Check the offline language pack and try again."
+            return
+        }
         recognizer?.setRecognitionListener(object : RecognitionListener {
             override fun onReadyForSpeech(params: Bundle?) { status.text = "Listening… say a command." }
             override fun onBeginningOfSpeech() { status.text = "I'm listening." }
