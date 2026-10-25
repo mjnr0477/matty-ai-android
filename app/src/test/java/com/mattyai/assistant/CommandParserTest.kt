@@ -4,6 +4,28 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class CommandParserTest {
+
+    @Test fun extractsCommandFollowingWakePhrase() {
+        assertEquals(
+            WakePhraseMatch(true, "tap Send"),
+            CommandParser.extractWakeCommand("Hey Matty, tap Send")
+        )
+    }
+
+    @Test fun recognizesWakePhraseWithoutCommand() {
+        assertEquals(
+            WakePhraseMatch(true, ""),
+            CommandParser.extractWakeCommand("Matty")
+        )
+    }
+
+    @Test fun ignoresUtterancesWithoutWakePhrase() {
+        assertEquals(
+            WakePhraseMatch(false, ""),
+            CommandParser.extractWakeCommand("tap Send")
+        )
+    }
+
     @Test fun stripsWakeNameAndOpensWifiSettings() {
         assertEquals(MattyCommandType.OPEN_WIFI_SETTINGS, CommandParser.parse("Matty, open Wi-Fi").type)
     }
