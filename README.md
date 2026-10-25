@@ -2,6 +2,17 @@
 
 Matty AI is an independent native Android project. It is separate from Dream Education and Dream Wi-Fi.
 
+
+## Cross-app command flow
+
+After microphone permission and Matty's Accessibility Service are enabled, the intended flow is:
+
+1. Say **“Matty, open WhatsApp”** to launch the installed WhatsApp app.
+2. Once WhatsApp is open, say **“Matty, click the link”** to ask Matty to activate the first accessible visible URL/link on the current screen.
+3. You can also say **“Matty, click Send”**, **“Matty, type hello”** (after focusing a text field), or **“Matty, scroll down”**.
+
+Link activation depends on the target app exposing the link through Android's accessibility tree. Some custom-rendered screens do not expose links or controls, and Matty must report failure rather than claim the tap succeeded. These cross-app flows still require real-device tests in WhatsApp and other target apps.
+
 ## Current implementation
 - Refreshed native UI with a guided **Allow Matty to access my phone** setup action.
 - Microphone permission flow and separate Android Accessibility Settings step. Android does not let an app silently grant itself all permissions.
