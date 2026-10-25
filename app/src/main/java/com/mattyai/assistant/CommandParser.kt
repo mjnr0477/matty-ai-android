@@ -5,7 +5,7 @@ enum class MattyCommandType {
     OPEN_WIFI_SETTINGS, OPEN_MOBILE_DATA_SETTINGS, OPEN_BLUETOOTH_SETTINGS,
     OPEN_NETWORK_SETTINGS, OPEN_NOTIFICATIONS, OPEN_QUICK_SETTINGS,
     GO_BACK, GO_HOME, VOLUME_DOWN, VOLUME_UP, START_PLAYBACK,
-    OPEN_MUSIC, OPEN_APP, TAP_TEXT, CLICK_FIRST_LINK, TYPE_TEXT, SCROLL_UP, SCROLL_DOWN, UNKNOWN
+    OPEN_MUSIC, OPEN_APP, OPEN_APP_AND_CLICK_LINK, TAP_TEXT, CLICK_FIRST_LINK, TYPE_TEXT, SCROLL_UP, SCROLL_DOWN, UNKNOWN
 }
 
 data class ParsedMattyCommand(val type: MattyCommandType, val argument: String = "")
@@ -17,6 +17,16 @@ object CommandParser {
         return when {
             command.startsWith("don't ") || command.startsWith("do not ") || command.startsWith("never ") ->
                 ParsedMattyCommand(MattyCommandType.UNKNOWN)
+            command.contains("link") && (command.contains("click") || command.contains("open") || command.contains("follow")) &&
+                command.startsWith("open ") -> {
+                val appStart = "open ".length
+                val separator = Regex("(?i)\\b(?:at this time|and then|then|and|there's|there is|click|follow|open)\\b")
+                    .find(command, appStart)
+                val appName = (separator?.let { command.substring(appStart, it.range.first) }
+                    ?: command.substring(appStart)).trim()
+                if (appName.isNotEmpty()) ParsedMattyCommand(MattyCommandType.OPEN_APP_AND_CLICK_LINK, appName)
+                else ParsedMattyCommand(MattyCommandType.CLICK_FIRST_LINK)
+            }
             command.contains("link") && (command.contains("click") || command.contains("open") || command.contains("follow")) ->
                 ParsedMattyCommand(MattyCommandType.CLICK_FIRST_LINK)
             command.startsWith("tap ") || command.startsWith("click ") ->
