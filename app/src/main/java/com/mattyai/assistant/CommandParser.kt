@@ -17,8 +17,7 @@ object CommandParser {
         return when {
             command.startsWith("don't ") || command.startsWith("do not ") || command.startsWith("never ") ->
                 ParsedMattyCommand(MattyCommandType.UNKNOWN)
-            command == "click link" || command == "click the link" || command == "click this link" ||
-                command == "open the link" || command == "open this link" || command == "follow the link" ->
+            command.contains("link") && (command.contains("click") || command.contains("open") || command.contains("follow")) ->
                 ParsedMattyCommand(MattyCommandType.CLICK_FIRST_LINK)
             command.startsWith("tap ") || command.startsWith("click ") ->
                 ParsedMattyCommand(
