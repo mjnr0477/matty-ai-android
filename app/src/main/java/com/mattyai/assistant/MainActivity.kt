@@ -121,6 +121,7 @@ class MainActivity : Activity() {
     }
 
     private fun ensureWakeService() {
+        if (!getSharedPreferences("matty_settings", MODE_PRIVATE).getBoolean("hands_free_enabled", false)) return
         if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) return
         if (!SpeechRecognizer.isOnDeviceRecognitionAvailable(this)) {
             if (::status.isInitialized) status.text = "This phone has no available on-device speech recognizer. Install an offline speech service and language pack; Matty will not use online speech."
@@ -183,7 +184,7 @@ class MainActivity : Activity() {
         accessCard.addView(text("Android will ask for microphone and nearby Bluetooth permissions when needed. Bluetooth scanning and pairing are optional.", 13f, muted, false), params(bottom = 14))
         accessButton = Button(this).apply {
             text = "Allow microphone access"; isAllCaps = false; textSize = 14f; setTextColor(Color.WHITE)
-            background = rounded(ink, 16); setOnClickListener { beginAccessSetup() }
+            background = rounded(ink, 16); setOnClickListener { toggleHandsFree() }
         }
         accessCard.addView(accessButton, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(50)))
 
@@ -197,9 +198,7 @@ class MainActivity : Activity() {
             background = rounded(purple, 16)
             setOnClickListener { requestDefaultAssistant() }
         }
-        page.addView(assistantButton, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(50)).apply {
-            bottomMargin = dp(10)
-        })
+        assistantButton.visibility = View.GONE
 
         val crossAppButton = Button(this).apply {
             text = "Enable hands-free controls in other apps"
@@ -209,36 +208,28 @@ class MainActivity : Activity() {
             background = rounded(Color.rgb(236, 237, 246), 16)
             setOnClickListener { requestCrossAppVoiceControl() }
         }
-        page.addView(crossAppButton, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(50)).apply {
-            bottomMargin = dp(10)
-        })
+        crossAppButton.visibility = View.GONE
 
         val bluetoothButton = Button(this).apply {
             text = "Find and pair Bluetooth devices"; isAllCaps = false; textSize = 14f
             setTextColor(Color.WHITE); background = rounded(purple, 16)
             setOnClickListener { startActivity(Intent(this@MainActivity, BluetoothActivity::class.java)) }
         }
-        page.addView(bluetoothButton, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(50)).apply {
-            bottomMargin = dp(10)
-        })
+        bluetoothButton.visibility = View.GONE
 
         val talkButton = Button(this).apply {
             text = "Tap to talk"; isAllCaps = false; textSize = 15f
             setTextColor(Color.WHITE); background = rounded(ink, 16)
             setOnClickListener { startListening() }
         }
-        page.addView(talkButton, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(50)).apply {
-            bottomMargin = dp(10)
-        })
+        talkButton.visibility = View.GONE
 
         val typeButton = Button(this).apply {
             text = "Type a command"; isAllCaps = false; textSize = 14f
             setTextColor(ink); background = rounded(Color.rgb(236, 237, 246), 16)
             setOnClickListener { showTextCommandDialog() }
         }
-        page.addView(typeButton, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(48)).apply {
-            bottomMargin = dp(12)
-        })
+        typeButton.visibility = View.GONE
 
         page.addView(text("Try: open Bluetooth settings · open Wi-Fi settings · open WhatsApp · volume up · search for weather", 12f, muted, false), params(bottom = 6))
         page.addView(text("PRIVACY FIRST · Commands are handled on your phone where possible. Offline speech depends on your Android speech service and downloaded language packs.", 11f, muted, false), params(top = 14))
@@ -325,19 +316,32 @@ class MainActivity : Activity() {
     }
 
     private fun continueAccessSetup() {
-        status.text = "Starting offline voice wake. Keep Matty's ongoing notification enabled."
+        getSharedPreferences("matty_settings", MODE_PRIVATE).edit().putBoolean("hands_free_enabled", true).apply()
+        status.text = "Starting hands-free. Keep Matty's ongoing notification enabled."
         refreshAccessState()
         ensureWakeService()
     }
 
+    private fun toggleHandsFree() {
+        val prefs = getSharedPreferences("matty_settings", MODE_PRIVATE)
+        if (prefs.getBoolean("hands_free_enabled", false)) {
+            prefs.edit().putBoolean("hands_free_enabled", false).apply()
+            stopService(Intent(this, MattyWakeService::class.java))
+            refreshAccessState()
+        } else {
+            beginAccessSetup()
+        }
+    }
+
     private fun refreshAccessState() {
         val mic = checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
-        accessButton.text = if (!mic) "Allow microphone access" else "Voice access enabled ✓"
-        val roleManager = getSystemService(RoleManager::class.java)
-        assistantButton.text = if (roleManager?.isRoleHeld(RoleManager.ROLE_ASSISTANT) == true)
-            "Matty is your default assistant ✓" else "Set Matty as default assistant"
-        status.text = if (!mic) "Microphone permission is needed for voice commands."
-            else "Matty is ready for supported voice commands. Say “Matty” to begin."
+        val enabled = getSharedPreferences("matty_settings", MODE_PRIVATE).getBoolean("hands_free_enabled", false)
+        accessButton.text = if (enabled) "Disable hands-free" else "Enable hands-free"
+        status.text = when {
+            !mic -> "Enable hands-free and allow microphone access."
+            enabled -> "Hands-free is enabled. Say “Matty” followed by a command."
+            else -> "Hands-free is off."
+        }
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
