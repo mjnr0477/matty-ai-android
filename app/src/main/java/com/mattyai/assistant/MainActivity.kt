@@ -188,6 +188,31 @@ class MainActivity : Activity() {
         }
         accessCard.addView(accessButton, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(50)))
 
+        accessCard.addView(text("Voice language", 13f, ink, true), params(top = 14, bottom = 5))
+        val voiceLanguages = listOf(
+            "English (US)" to "en-US",
+            "English (UK)" to "en-GB",
+            "English (Kenya)" to "en-KE",
+            "Kiswahili (Kenya)" to "sw-KE",
+            "Kiswahili" to "sw"
+        )
+        val voiceLanguage = android.widget.Spinner(this).apply {
+            adapter = android.widget.ArrayAdapter(this@MainActivity, android.R.layout.simple_spinner_dropdown_item,
+                voiceLanguages.map { it.first })
+            val savedTag = getSharedPreferences("matty_settings", MODE_PRIVATE)
+                .getString("voice_language", Locale.getDefault().toLanguageTag())
+            setSelection(voiceLanguages.indexOfFirst { it.second.equals(savedTag, true) }.let { if (it < 0) 0 else it })
+            onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
+                override fun onNothingSelected(parent: android.widget.AdapterView<*>?) = Unit
+                override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: View?, position: Int, id: Long) {
+                    getSharedPreferences("matty_settings", MODE_PRIVATE).edit()
+                        .putString("voice_language", voiceLanguages[position].second).apply()
+                    if (::status.isInitialized) status.text = "Voice language: ${voiceLanguages[position].first}. The matching offline speech pack must be installed."
+                }
+            }
+        }
+        accessCard.addView(voiceLanguage, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(48)))
+
         page.addView(accessCard, params(bottom = 12))
 
         assistantButton = Button(this).apply {
