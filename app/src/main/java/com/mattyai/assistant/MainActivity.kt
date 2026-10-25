@@ -259,6 +259,24 @@ class MainActivity : Activity() {
             MattyCommandType.START_PLAYBACK -> startPlayback()
             MattyCommandType.OPEN_MUSIC -> openMusic()
             MattyCommandType.OPEN_APP -> openApp(parsed.argument)
+            MattyCommandType.TAP_TEXT -> {
+                val service = MattyAccessibilityService.instance
+                status.text = when {
+                    service == null -> "Enable Matty's Accessibility Service first."
+                    service.clickText(parsed.argument) -> "Tapped “${parsed.argument}”."
+                    else -> "Couldn't find a tappable control labelled “${parsed.argument}” on this screen."
+                }
+            }
+            MattyCommandType.TYPE_TEXT -> {
+                val service = MattyAccessibilityService.instance
+                status.text = when {
+                    service == null -> "Enable Matty's Accessibility Service first."
+                    service.enterText(parsed.argument) -> "Entered the requested text in the focused text field."
+                    else -> "Couldn't find an editable text field. Tap a field first, then ask Matty to type."
+                }
+            }
+            MattyCommandType.SCROLL_UP -> globalAction(AccessibilityServiceAction.SCROLL_UP, "Scrolled up.")
+            MattyCommandType.SCROLL_DOWN -> globalAction(AccessibilityServiceAction.SCROLL_DOWN, "Scrolled down.")
             MattyCommandType.UNKNOWN -> status.text = "I heard you, but that action is not supported yet."
         }
         ensureWakeService()
