@@ -40,6 +40,7 @@ class MainActivity : Activity() {
     private lateinit var transcript: TextView
     private lateinit var accessButton: Button
     private var manualSpeechService: SpeechService? = null
+    private var manualRecognizer: Recognizer? = null
     private var manualModel: Model? = null
     private var assistantInvocationActive = false
     private var commandStartScheduled = false
@@ -478,6 +479,7 @@ class MainActivity : Activity() {
                     if (manualModel == null) manualModel = Model(path)
                     stopManualSpeech()
                     val recognizer = Recognizer(manualModel, 16000.0f)
+                    manualRecognizer = recognizer
                     manualSpeechService = SpeechService(recognizer, 16000.0f)
                     status.text = "Listening offline… say a command."
                     manualSpeechService?.startListening(object : RecognitionListener {
@@ -520,6 +522,8 @@ class MainActivity : Activity() {
         try { manualSpeechService?.stop() } catch (_: Exception) { }
         try { manualSpeechService?.shutdown() } catch (_: Exception) { }
         manualSpeechService = null
+        try { manualRecognizer?.close() } catch (_: Exception) { }
+        manualRecognizer = null
     }
 
     private fun handleCommand(raw: String) {
