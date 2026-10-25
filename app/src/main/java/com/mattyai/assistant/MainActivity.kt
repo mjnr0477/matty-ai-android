@@ -149,11 +149,11 @@ class MainActivity : Activity() {
         val scroll = ScrollView(this).apply { isFillViewport = true; addView(page) }
         val brandRow = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL; orientation = LinearLayout.HORIZONTAL }
         val logo = TextView(this).apply {
-            text = "M"; textSize = 24f; typeface = Typeface.DEFAULT_BOLD; gravity = Gravity.CENTER
+            text = "A"; textSize = 24f; typeface = Typeface.DEFAULT_BOLD; gravity = Gravity.CENTER
             setTextColor(Color.WHITE); background = rounded(purple, 18); layoutParams = LinearLayout.LayoutParams(dp(48), dp(48))
         }
         val brandText = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(12), 0, 0, 0) }
-        brandText.addView(text("MATTY AI", 17f, ink, true))
+        brandText.addView(text("ANDROID", 17f, ink, true))
         brandText.addView(text("YOUR PHONE, YOUR VOICE", 10f, muted, true))
         brandRow.addView(logo); brandRow.addView(brandText)
         page.addView(brandRow, params(bottom = 24))
@@ -174,7 +174,7 @@ class MainActivity : Activity() {
         }
         hero.addView(orb)
         hero.addView(text("Ready when you are", 20f, ink, true).apply { gravity = Gravity.CENTER }, params(bottom = 5))
-        status = text("Set up access to start using Matty.", 13f, muted, false).apply { gravity = Gravity.CENTER }
+        status = text("Set up access to start using Android.", 13f, muted, false).apply { gravity = Gravity.CENTER }
         hero.addView(status, params(bottom = 8))
         transcript = text("Try: “Matty, open WhatsApp”", 13f, ink, false).apply { gravity = Gravity.CENTER }
         hero.addView(transcript, params(bottom = 14))
@@ -185,7 +185,7 @@ class MainActivity : Activity() {
             background = rounded(Color.rgb(241, 239, 255), 22)
         }
         accessCard.addView(text("One setup, then you're ready", 17f, ink, true), params(bottom = 6))
-        accessCard.addView(text("Enable microphone access and Matty in Accessibility settings to let it operate visible controls in other apps. You stay in control of every command.", 13f, muted, false), params(bottom = 14))
+        accessCard.addView(text("Enable microphone access and Android in Accessibility settings to let it operate visible controls in other apps. You stay in control of every command.", 13f, muted, false), params(bottom = 14))
         accessButton = Button(this).apply {
             text = "Allow microphone access"; isAllCaps = false; textSize = 14f; setTextColor(Color.WHITE)
             background = rounded(ink, 16); setOnClickListener { toggleHandsFree() }
