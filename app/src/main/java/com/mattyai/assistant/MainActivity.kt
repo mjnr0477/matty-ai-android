@@ -49,12 +49,14 @@ class MainActivity : Activity() {
         window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
         buildUi()
         refreshAccessState()
+        stopWakeServiceForWakeIntent()
         startCommandAfterUnlockIfPossible()
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        stopWakeServiceForWakeIntent()
         startCommandAfterUnlockIfPossible()
     }
 
@@ -81,7 +83,18 @@ class MainActivity : Activity() {
         }
         intent?.removeExtra(MattyWakeService.EXTRA_WAKE_WORD)
         status.text = "Matty heard you. Tell me what to do."
-        startListening()
+        Handler(Looper.getMainLooper()).postDelayed({
+            if (!isFinishing && !isDestroyed &&
+                !(getSystemService(KEYGUARD_SERVICE) as KeyguardManager).isKeyguardLocked) {
+                startListening()
+            }
+        }, 350L)
+    }
+
+    private fun stopWakeServiceForWakeIntent() {
+        if (intent?.getBooleanExtra(MattyWakeService.EXTRA_WAKE_WORD, false) == true) {
+            try { stopService(Intent(this, MattyWakeService::class.java)) } catch (_: Exception) { }
+        }
     }
 
     private fun ensureWakeService() {
