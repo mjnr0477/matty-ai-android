@@ -2,6 +2,10 @@
 
 Matty AI is an independent native Android project. It is separate from Dream Education and Dream Wi-Fi.
 
+## Build outputs
+
+The GitHub Actions workflow tests and builds the debug APK, then creates release APK and AAB outputs. If release signing secrets are configured, the workflow signs the release artifacts and verifies the APK signature. Download the `matty-ai-android-builds` artifact from the latest successful Actions run.
+
 ## Cross-app command flow
 
 After microphone permission and Matty's Accessibility Service are enabled, the intended flow is:
@@ -24,7 +28,6 @@ Link activation depends on the target app exposing the link through Android's ac
 - **“Search for [query]”** opens a browser web search. This specific action requires an internet connection; core command parsing remains local.
 - Accessibility is opt-in. For tap, text-entry, and scroll commands, Matty returns to the app underneath before performing the requested action so it does not accidentally target its own setup screen. It inspects the current accessibility node tree in memory only for that action; it does not save or transmit screen contents.
 - Deterministic local command parser with unit tests for supported commands and unknown-command safety.
-- GitHub Actions runs parser tests and Android lint, then builds a debug APK and release APK/AAB. When all four release secrets are configured, the release artifacts are signed and the APK signature is verified.
 
 ## Release signing secrets
 
@@ -45,10 +48,6 @@ The workflow decodes the keystore into the runner's temporary directory and does
 - Accessibility access is a separate, explicit system opt-in. One button cannot grant all Android permissions.
 - Cloud AI is intentionally not wired in. Command matching is local; speech recognition works offline only when Android provides an on-device recognizer with the required downloaded language pack. This build deliberately stops the wake service rather than silently falling back to online recognition. The current app targets Android 12+ because it relies on Android on-device SpeechRecognizer.
 - A CI build passing does not prove the app works reliably on a physical phone. Device verification is required before calling it production-ready.
-
-## Build
-
-Open the project in Android Studio with Android SDK 35 installed and sync Gradle, then run `gradle testDebugUnitTest` and `gradle assembleDebug`. No Gradle wrapper is included yet. GitHub Actions builds and uploads artifacts after tests and lint. Download the APK/AAB from the successful Actions run's **Artifacts** section.
 
 ## Manual device test checklist
 
