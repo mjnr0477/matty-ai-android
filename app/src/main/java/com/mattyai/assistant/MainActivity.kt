@@ -18,9 +18,11 @@ import android.provider.Settings
 import android.net.Uri
 import android.app.KeyguardManager
 import android.app.role.RoleManager
-import android.speech.RecognitionListener
-import android.speech.RecognizerIntent
-import android.speech.SpeechRecognizer
+import org.json.JSONObject
+import org.vosk.Model
+import org.vosk.Recognizer
+import org.vosk.android.SpeechService
+import org.vosk.android.RecognitionListener
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -37,7 +39,8 @@ class MainActivity : Activity() {
     private lateinit var status: TextView
     private lateinit var transcript: TextView
     private lateinit var accessButton: Button
-    private var recognizer: SpeechRecognizer? = null
+    private var manualSpeechService: SpeechService? = null
+    private var manualModel: Model? = null
     private var assistantInvocationActive = false
     private var commandStartScheduled = false
     private val requestAudio = 501
@@ -123,14 +126,6 @@ class MainActivity : Activity() {
     private fun ensureWakeService() {
         if (!getSharedPreferences("matty_settings", MODE_PRIVATE).getBoolean("hands_free_enabled", false)) return
         if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) return
-        val offlineAvailable = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
-            SpeechRecognizer.isOnDeviceRecognitionAvailable(this)
-        val fallbackAccepted = getSharedPreferences("matty_settings", MODE_PRIVATE)
-            .getBoolean("online_speech_fallback_accepted", false)
-        if (!offlineAvailable && !fallbackAccepted) {
-            requestOnlineSpeechFallbackConsent { startWakeService() }
-            return
-        }
         startWakeService()
     }
 
@@ -212,13 +207,7 @@ class MainActivity : Activity() {
         accessCard.addView(accessButton, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(50)))
 
         accessCard.addView(text("Voice language", 13f, ink, true), params(top = 14, bottom = 5))
-        val voiceLanguages = listOf(
-            "English (US)" to "en-US",
-            "English (UK)" to "en-GB",
-            "English (Kenya)" to "en-KE",
-            "Kiswahili (Kenya)" to "sw-KE",
-            "Kiswahili" to "sw"
-        )
+        val voiceLanguages = listOf("English (US)" to "en-US")
         val voiceLanguage = android.widget.Spinner(this).apply {
             adapter = android.widget.ArrayAdapter(this@MainActivity, android.R.layout.simple_spinner_dropdown_item,
                 voiceLanguages.map { it.first })
@@ -230,7 +219,7 @@ class MainActivity : Activity() {
                 override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: View?, position: Int, id: Long) {
                     getSharedPreferences("matty_settings", MODE_PRIVATE).edit()
                         .putString("voice_language", voiceLanguages[position].second).apply()
-                    if (::status.isInitialized) status.text = "Voice language: ${voiceLanguages[position].first}. The matching offline speech pack must be installed."
+                    if (::status.isInitialized) status.text = "Voice language: ${voiceLanguages[position].first}. Matty’s built-in English model works offline; more languages will be added with their own models."
                 }
             }
         }
@@ -281,7 +270,7 @@ class MainActivity : Activity() {
         typeButton.visibility = View.GONE
 
         page.addView(text("Try: “Matty, open WhatsApp” · “Matty, tap Search” · “Matty, type hello” · “Matty, swipe left”", 12f, muted, false), params(bottom = 6))
-        page.addView(text("PRIVACY FIRST · Commands are handled on your phone where possible. Offline speech depends on your Android speech service and downloaded language packs.", 11f, muted, false), params(top = 14))
+        page.addView(text("PRIVACY FIRST · Commands are handled on your phone where possible. Matty uses its own offline English speech engine; the first model setup needs internet once.", 11f, muted, false), params(top = 14))
         setContentView(scroll)
     }
 
@@ -478,60 +467,59 @@ class MainActivity : Activity() {
 
     private fun startListening() {
         if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-            beginAccessSetup(); return
-        }
-        val offlineAvailable = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
-            SpeechRecognizer.isOnDeviceRecognitionAvailable(this)
-        val fallbackAccepted = getSharedPreferences("matty_settings", MODE_PRIVATE)
-            .getBoolean("online_speech_fallback_accepted", false)
-        if (!offlineAvailable && !fallbackAccepted) {
-            requestOnlineSpeechFallbackConsent { startListening() }
+            beginAccessSetup()
             return
         }
         assistantInvocationActive = false
-        recognizer?.destroy()
-        recognizer = try {
-            if (offlineAvailable) SpeechRecognizer.createOnDeviceSpeechRecognizer(this)
-            else SpeechRecognizer.createSpeechRecognizer(this)
-        } catch (_: Exception) {
-            status.text = "Couldn't start speech recognition. Check that an Android speech service is installed and try again."
-            return
-        }
-        recognizer?.setRecognitionListener(object : RecognitionListener {
-            override fun onReadyForSpeech(params: Bundle?) { status.text = "Listening… say a command." }
-            override fun onBeginningOfSpeech() { status.text = "I'm listening." }
-            override fun onRmsChanged(rmsdB: Float) {}
-            override fun onBufferReceived(buffer: ByteArray?) {}
-            override fun onEndOfSpeech() { status.text = "Working on it…" }
-            override fun onError(error: Int) {
-                status.text = when (error) {
-                    SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> "Microphone permission was denied. Allow it in Android Settings > Apps > Matty AI > Permissions."
-                    SpeechRecognizer.ERROR_LANGUAGE_NOT_SUPPORTED,
-                    SpeechRecognizer.ERROR_LANGUAGE_UNAVAILABLE -> "The selected speech language is unavailable. Install its speech language pack or choose a language supported by your speech service."
-                    SpeechRecognizer.ERROR_SERVER,
-                    SpeechRecognizer.ERROR_NETWORK,
-                    SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> "The speech service could not process audio. Check internet access for standard recognition, or install an offline speech service and language pack."
-                    SpeechRecognizer.ERROR_CLIENT -> "Android's speech service stopped. Check that Google Speech Services or another speech-recognition provider is enabled, then try again."
-                    else -> "Speech recognition failed (error $error). Check that a speech-recognition provider is enabled and supports the selected language; offline mode also needs a downloaded language pack."
+        status.text = "Preparing Matty's built-in offline speech…"
+        MattyOfflineSpeech.prepare(this) { result ->
+            result.onSuccess { path ->
+                try {
+                    if (manualModel == null) manualModel = Model(path)
+                    stopManualSpeech()
+                    val recognizer = Recognizer(manualModel, 16000.0f)
+                    manualSpeechService = SpeechService(recognizer, 16000.0f)
+                    status.text = "Listening offline… say a command."
+                    manualSpeechService?.startListening(object : RecognitionListener {
+                        private var handled = false
+                        override fun onPartialResult(hypothesis: String?) = Unit
+                        override fun onResult(hypothesis: String?) = accept(hypothesis)
+                        override fun onFinalResult(hypothesis: String?) = accept(hypothesis)
+                        override fun onError(exception: Exception?) {
+                            if (handled) return
+                            status.text = "Matty's offline microphone failed: ${exception?.message ?: "check microphone permission"}"
+                            stopManualSpeech()
+                        }
+                        override fun onTimeout() {
+                            if (!handled) {
+                                status.text = "No speech detected. Tap to talk and try again."
+                                stopManualSpeech()
+                            }
+                        }
+                        private fun accept(hypothesis: String?) {
+                            if (handled) return
+                            val phrase = try { JSONObject(hypothesis.orEmpty()).optString("text").trim() }
+                                catch (_: Exception) { "" }
+                            if (phrase.isBlank()) return
+                            handled = true
+                            stopManualSpeech()
+                            handleCommand(phrase)
+                        }
+                    })
+                } catch (e: Exception) {
+                    stopManualSpeech()
+                    status.text = "Matty could not start its built-in offline speech engine: ${e.message ?: "microphone unavailable"}"
                 }
+            }.onFailure { error ->
+                status.text = "Matty needs an internet connection once to install its built-in offline English model: ${error.message ?: "download failed"}"
             }
-            override fun onResults(results: Bundle?) {
-                val phrase = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull().orEmpty()
-                // End this one-shot recognizer before a command starts the persistent wake service.
-                try { recognizer?.destroy() } catch (_: Exception) { }
-                recognizer = null
-                handleCommand(phrase)
-            }
-            override fun onPartialResults(partialResults: Bundle?) {}
-            override fun onEvent(eventType: Int, params: Bundle?) {}
-        })
-        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE, selectedVoiceLocale().toLanguageTag())
-            putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, offlineAvailable)
-            putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false)
         }
-        try { recognizer?.startListening(intent) } catch (_: Exception) { status.text = "Couldn't start speech recognition on this phone." }
+    }
+
+    private fun stopManualSpeech() {
+        try { manualSpeechService?.stop() } catch (_: Exception) { }
+        try { manualSpeechService?.shutdown() } catch (_: Exception) { }
+        manualSpeechService = null
     }
 
     private fun handleCommand(raw: String) {
@@ -698,5 +686,5 @@ class MainActivity : Activity() {
     private fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()
     private fun rounded(color: Int, radius: Int) = GradientDrawable().apply { setColor(color); cornerRadius = dp(radius).toFloat() }
 
-    override fun onDestroy() { recognizer?.destroy(); recognizer = null; super.onDestroy() }
+    override fun onDestroy() { stopManualSpeech(); try { manualModel?.close() } catch (_: Exception) { }; manualModel = null; super.onDestroy() }
 }
