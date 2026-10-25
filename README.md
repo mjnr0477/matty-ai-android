@@ -6,6 +6,12 @@ Matty AI is an independent native Android project. It is separate from Dream Edu
 
 The GitHub Actions workflow tests and builds the debug APK, then creates release APK and AAB outputs. If release signing secrets are configured, the workflow signs the release artifacts and verifies the APK signature. Download the `matty-ai-android-builds` artifact from the latest successful Actions run.
 
+## Android system assistant integration
+
+Matty now declares an Android `VoiceInteractionService` and provides a setup button to request the system's default-assistant role. The user must explicitly approve the role change. When Android invokes Matty through a supported system gesture, Matty opens its voice UI and listens for a command after microphone permission is granted.
+
+This integration is a more appropriate system entry point than relying only on a continuously running app-owned microphone service. It does **not** create a custom always-on “Matty” hotword detector, guarantee screen-off activation on every device, or grant permission to control other apps' interfaces. Android and the device manufacturer determine available invocation gestures and background behavior.
+
 ## Cross-app command flow
 
 After microphone permission is enabled, the supported flow is:
@@ -18,7 +24,7 @@ Bluetooth pairing and connections depend on the device, Android permissions, and
 
 ## Current implementation
 
-- Refreshed native UI with guided microphone setup and a dedicated nearby Bluetooth device screen.
+- Refreshed native UI with guided microphone setup, a default-assistant role setup button, and a dedicated nearby Bluetooth device screen.
 - Bluetooth discovery, paired-device listing, user-approved pairing requests, and a shortcut to Android Bluetooth settings for profile-specific connections.
 - No Accessibility Service is declared in the release manifest. This removes a sensitive sideloading permission that can trigger Play Protect blocks for internet-downloaded apps; it cannot guarantee Google's classifier will never warn about the APK.
 - Offline-only wake-phrase service prototype using Android on-device speech recognition, a microphone foreground-service notification, and a short screen-wake attempt. It waits for Matty's spoken reply to finish before resuming recognition to reduce self-triggering; this behavior still needs physical-device testing. It refuses to use cloud recognition for speech.
@@ -42,7 +48,7 @@ The workflow decodes the keystore into the runner's temporary directory and does
 
 ## Important limitations — not production complete yet
 
-- The wake phrase is a **prototype, not production-verified**. Android SpeechRecognizer is not a dedicated low-power hotword engine; it may stop, be killed by battery management, fail to bring Matty forward while locked, or behave differently across manufacturers. A production release needs a dedicated offline keyword-spotting engine and physical-device screen-off, false-trigger, and battery tests.
+- The system assistant integration and wake phrase are **not production-verified**. The Android assistant role provides system invocation only where the OS/device supports it; the optional wake phrase remains a prototype. Android SpeechRecognizer is not a dedicated low-power hotword engine; it may stop, be killed by battery management, fail to bring Matty forward while locked, or behave differently across manufacturers. A production release needs a dedicated offline keyword-spotting engine and physical-device screen-off, false-trigger, and battery tests.
 - Android usually does not allow third-party apps to toggle mobile data directly. Matty opens the relevant settings page instead.
 - Specific-song playback depends on the installed music app, its APIs, and track availability. This prototype opens a compatible player; it does not guarantee starting an arbitrary song.
 - Android does not permit a third-party app to make a universal connection to every Bluetooth device. Matty can discover nearby devices, request pairing, and open Android's Bluetooth settings; the actual connection depends on the device's Bluetooth profile.
