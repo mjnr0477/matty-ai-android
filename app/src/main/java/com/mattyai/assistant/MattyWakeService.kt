@@ -78,7 +78,13 @@ class MattyWakeService : Service() {
                             putExtra(EXTRA_WAKE_WORD, true)
                         }
                         try { startActivity(intent) } catch (_: Exception) { }
-                        stopSelf()
+                        handler.postDelayed({
+                            if (wakeTriggered) {
+                                wakeTriggered = false
+                                updateNotification("Matty heard you. Unlock your phone; tap this notification if Matty did not open.")
+                                startWakeListening()
+                            }
+                        }, 2_500L)
                     } else {
                         handler.postDelayed(retryListening, 350L)
                     }
@@ -148,13 +154,17 @@ class MattyWakeService : Service() {
     }
 
     private fun updateNotification(message: String) {
+        val open = PendingIntent.getActivity(
+            this, 0, Intent(this, MainActivity::class.java),
+            PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= 23) PendingIntent.FLAG_IMMUTABLE else 0)
+        )
         val n = if (Build.VERSION.SDK_INT >= 26) Notification.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_dialog_info).setContentTitle("Matty voice wake")
-            .setContentText(message).build()
+            .setContentText(message).setContentIntent(open).setOngoing(true).build()
         else {
             @Suppress("DEPRECATION")
             Notification.Builder(this).setSmallIcon(android.R.drawable.ic_dialog_info)
-                .setContentTitle("Matty voice wake").setContentText(message).build()
+                .setContentTitle("Matty voice wake").setContentText(message).setContentIntent(open).setOngoing(true).build()
         }
         (getSystemService(NOTIFICATION_SERVICE) as NotificationManager).notify(NOTIFICATION_ID, n)
     }
@@ -169,12 +179,20 @@ class MattyWakeService : Service() {
         super.onDestroy()
     }
 
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int = START_STICKY
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (intent?.action == ACTION_WAKE_HANDLED) {
+            wakeTriggered = false
+            stopSelf()
+            return START_NOT_STICKY
+        }
+        return START_STICKY
+    }
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     companion object {
         const val EXTRA_WAKE_WORD = "com.mattyai.assistant.WAKE_WORD"
+        const val ACTION_WAKE_HANDLED = "com.mattyai.assistant.ACTION_WAKE_HANDLED"
         private const val CHANNEL_ID = "matty_voice_wake"
         private const val NOTIFICATION_ID = 2407
         @Volatile private var wakeTriggered = false
