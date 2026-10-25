@@ -15,7 +15,7 @@ The artifact is a test build until the device checklist below passes. A successf
 2. Tap **Enable hands-free** and grant microphone permission. Matty explains why cross-app access is needed and asks you to review the disclosure.
 3. In Android Accessibility settings, explicitly enable Matty's **cross-app voice control** service. This permission is necessary for tapping, typing, scrolling, swiping, and long-pressing controls in other apps.
 4. Return to Matty. The ongoing notification indicates that the background microphone service is running. Keep it enabled while using hands-free.
-5. Matty downloads its own compact English speech model once (about 40 MB) and stores it inside the app. After setup, speech recognition runs locally without Android speech packs or internet. The first download requires internet and enough free storage. English (US) is the currently integrated recognition model.
+5. Matty bundles its own compact English speech model in the APK and copies it into app-private storage on first use. No separate Android speech pack or internet connection is required at runtime. English (US) is the currently integrated recognition model. The APK is larger because it includes the model.
 
 You can turn hands-free off from the same main button. Android may still stop background recognition because of battery management or manufacturer restrictions.
 
@@ -35,7 +35,7 @@ The app performs deterministic, explicit actions. It does not yet have a general
 
 ## Android platform constraints
 
-- Matty uses the integrated Vosk offline speech engine with its English model stored in the app's private storage after first-time download. It does not depend on Android's speech-recognition provider or language packs. English is currently supported; more languages require their own compatible models. This is a continuous microphone listener, not a dedicated low-power hardware hotword engine. Screen-off listening, false-trigger rate, battery use, and restart behavior vary by device.
+- Matty bundles the Vosk offline speech engine and English model in the APK, then stores a private working copy on first use. It does not depend on Android's speech-recognition provider or language packs. English is currently supported; more languages require their own compatible models. This is a continuous microphone listener, not a dedicated low-power hardware hotword engine. Screen-off listening, false-trigger rate, battery use, and restart behavior vary by device.
 - Android normally prevents third-party apps from directly toggling mobile data; Matty opens the relevant system settings.
 - Music playback depends on the installed music app and its active media session. Matty cannot guarantee that an arbitrary song starts.
 - Accessibility is powerful and sensitive. The user must explicitly enable it in Android settings; Play Console distribution requires the applicable Accessibility API declaration and policy review.
@@ -51,7 +51,7 @@ The app performs deterministic, explicit actions. It does not yet have a general
 6. Verify that unsupported actions are reported honestly and do not claim success.
 7. Only label the app production-ready after real-device tests pass and Accessibility policy requirements for the intended distribution channel are met.
 
-## Release signing
+## Offline speech model attribution\n\nThe bundled `vosk-model-small-en-us-0.15` model is distributed under Apache License 2.0 by the Vosk project. The build downloads the official model archive from https://alphacephei.com/vosk/models and packages it into the APK.\n\n## Release signing
 
 GitHub Actions reads these repository secrets without exposing their values in source:
 - `ANDROID_KEYSTORE_BASE64`
