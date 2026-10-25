@@ -170,7 +170,10 @@ class BluetoothActivity : Activity() {
                     addAction(BluetoothAdapter.ACTION_DISCOVERY_FINISHED)
                 }
                 if (Build.VERSION.SDK_INT >= 33) registerReceiver(discoveryReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
-                else @Suppress("DEPRECATION") registerReceiver(discoveryReceiver, filter)
+                else {
+                    @Suppress("DEPRECATION")
+                    registerReceiver(discoveryReceiver, filter)
+                }
                 receiverRegistered = true
             }
             if (bt.isDiscovering) bt.cancelDiscovery()
