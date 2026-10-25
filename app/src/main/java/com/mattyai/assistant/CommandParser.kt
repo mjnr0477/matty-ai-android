@@ -2,7 +2,7 @@ package com.mattyai.assistant
 
 /** Pure local parser: no network calls and no model-generated actions. */
 enum class MattyCommandType {
-    OPEN_WIFI_SETTINGS, OPEN_MOBILE_DATA_SETTINGS, OPEN_BLUETOOTH_SETTINGS,
+    OPEN_SYSTEM_SETTINGS, OPEN_WIFI_SETTINGS, OPEN_MOBILE_DATA_SETTINGS, OPEN_BLUETOOTH_SETTINGS,
     OPEN_NETWORK_SETTINGS, OPEN_NOTIFICATIONS, OPEN_QUICK_SETTINGS,
     GO_BACK, GO_HOME, VOLUME_DOWN, VOLUME_UP, START_PLAYBACK,
     OPEN_MUSIC, OPEN_APP, INSTALL_APP, SEARCH_WEB, OPEN_APP_AND_CLICK_LINK, TAP_TEXT, CLICK_FIRST_LINK, TYPE_TEXT, SCROLL_UP, SCROLL_DOWN, UNKNOWN
@@ -65,6 +65,7 @@ object CommandParser {
             command.startsWith("type ") -> ParsedMattyCommand(MattyCommandType.TYPE_TEXT, original.replace(Regex("(?i)^type\\s+"), "").trim())
             command.contains("scroll down") || command == "swipe up" -> ParsedMattyCommand(MattyCommandType.SCROLL_DOWN)
             command.contains("scroll up") || command == "swipe down" -> ParsedMattyCommand(MattyCommandType.SCROLL_UP)
+            command == "settings" || command == "open settings" || command == "phone settings" || command == "system settings" -> ParsedMattyCommand(MattyCommandType.OPEN_SYSTEM_SETTINGS)
             command.contains("wifi") || command.contains("wi-fi") -> ParsedMattyCommand(MattyCommandType.OPEN_WIFI_SETTINGS)
             command.contains("mobile data") || command.contains("cellular data") || command == "data" -> ParsedMattyCommand(MattyCommandType.OPEN_MOBILE_DATA_SETTINGS)
             command.contains("bluetooth") -> ParsedMattyCommand(MattyCommandType.OPEN_BLUETOOTH_SETTINGS)
