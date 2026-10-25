@@ -188,7 +188,6 @@ class MattyWakeService : Service() {
             MattyCommandType.OPEN_MOBILE_DATA_SETTINGS -> launchIntent(Intent(Settings.ACTION_DATA_USAGE_SETTINGS), "Opening mobile data settings.")
             MattyCommandType.OPEN_BLUETOOTH_SETTINGS -> launchIntent(Intent(Settings.ACTION_BLUETOOTH_SETTINGS), "Opening Bluetooth settings.")
             MattyCommandType.OPEN_NETWORK_SETTINGS -> launchIntent(Intent(Settings.ACTION_WIRELESS_SETTINGS), "Opening network settings.")
-            MattyCommandType.OPEN_NOTIFICATIONS -> launchIntent(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS), "Opening notification access settings.")
             MattyCommandType.SEARCH_WEB -> launchIntent(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/search?q=" + Uri.encode(command.argument))), "Searching the web for ${command.argument}.")
             MattyCommandType.INSTALL_APP -> launchIntent(Intent(Intent.ACTION_VIEW, Uri.parse("market://search?q=" + Uri.encode(command.argument))), "Opening the app store search for ${command.argument}.")
             MattyCommandType.OPEN_MUSIC -> launchMusic()
