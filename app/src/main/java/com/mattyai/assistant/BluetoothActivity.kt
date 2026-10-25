@@ -265,7 +265,11 @@ class BluetoothActivity : Activity() {
     }
 
     override fun onDestroy() {
-        try { adapter?.takeIf { it.isDiscovering }?.cancelDiscovery() } catch (_: Exception) { }
+        if (Build.VERSION.SDK_INT < 31 ||
+            (checkSelfPermission(Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED &&
+             checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED)) {
+            try { adapter?.let { if (it.isDiscovering) it.cancelDiscovery() } } catch (_: SecurityException) { }
+        }
         if (receiverRegistered) try { unregisterReceiver(discoveryReceiver) } catch (_: Exception) { }
         receiverRegistered = false
         super.onDestroy()
