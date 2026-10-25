@@ -100,6 +100,15 @@ class CommandParserTest {
         assertEquals(MattyCommandType.SCROLL_DOWN, CommandParser.parse("scroll down").type)
         assertEquals(MattyCommandType.SCROLL_UP, CommandParser.parse("Matty scroll up").type)
     }
+
+    @Test fun parsesLongPressAndSystemShadeCommands() {
+        assertEquals(
+            ParsedMattyCommand(MattyCommandType.LONG_PRESS_TEXT, "Profile"),
+            CommandParser.parse("Matty long press Profile")
+        )
+        assertEquals(MattyCommandType.OPEN_NOTIFICATIONS, CommandParser.parse("open notifications").type)
+        assertEquals(MattyCommandType.OPEN_QUICK_SETTINGS, CommandParser.parse("open quick settings").type)
+    }
     @Test fun unknownCommandsDoNotCreateArbitraryActions() {
         assertEquals(MattyCommandType.UNKNOWN, CommandParser.parse("transfer all my money").type)
         assertEquals(MattyCommandType.UNKNOWN, CommandParser.parse("Matty do not open Wi-Fi").type)
