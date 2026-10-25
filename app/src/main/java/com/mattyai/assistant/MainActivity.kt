@@ -307,7 +307,10 @@ class MainActivity : Activity() {
             )
             MattyCommandType.UNKNOWN -> status.text = "I heard you, but that action is not supported yet."
         }
-        ensureWakeService()
+        if (parsed.type !in setOf(
+                MattyCommandType.TAP_TEXT, MattyCommandType.CLICK_FIRST_LINK,
+                MattyCommandType.TYPE_TEXT, MattyCommandType.SCROLL_UP, MattyCommandType.SCROLL_DOWN
+            )) ensureWakeService()
     }
 
     /**
@@ -325,6 +328,10 @@ class MainActivity : Activity() {
             return
         }
         val appContext = applicationContext
+        // Release the one-shot recognizer before starting the background wake recognizer.
+        try { recognizer?.cancel(); recognizer?.destroy() } catch (_: Exception) { }
+        recognizer = null
+        ensureWakeService()
         finish()
         Handler(Looper.getMainLooper()).postDelayed({
             val completed = try { action(service) } catch (_: Exception) { false }
