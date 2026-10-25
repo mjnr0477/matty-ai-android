@@ -10,7 +10,7 @@ Matty AI is an independent native Android project. It is separate from Dream Edu
 - Local commands to open installed apps and Wi-Fi / mobile-data / Bluetooth / general settings, adjust media volume, open music apps, navigate Home / Back / notifications / Quick Settings, tap visible controls by label, enter text into an editable field, and scroll.
 - Accessibility is opt-in. Matty inspects the current accessibility node tree in memory only when carrying out an explicitly requested tap, text-entry, or scroll action; it does not save or transmit screen contents.
 - Deterministic local command parser with unit tests for supported commands and unknown-command safety.
-- GitHub Actions workflow runs parser tests, builds a debug APK, and uploads it as a workflow artifact when successful.
+- GitHub Actions runs parser tests and Android lint, then builds a debug APK plus unsigned release APK/AAB artifacts. Unsigned release artifacts still need secure signing before distribution.
 
 ## Important limitations — not production complete yet
 - The wake phrase is a **prototype, not production-verified**. Android SpeechRecognizer is not a dedicated low-power hotword engine; it may stop, be killed by battery management, fail to bring Matty forward while locked, or behave differently across manufacturers. A production release needs a dedicated offline keyword-spotting engine and physical-device screen-off, false-trigger, and battery tests.
@@ -21,7 +21,7 @@ Matty AI is an independent native Android project. It is separate from Dream Edu
 - This code has not yet been built with a complete Android SDK toolchain or tested end-to-end on a physical phone. Do not treat it as release-ready.
 
 ## Build
-Open the project in Android Studio with Android SDK 35 installed and sync Gradle, then run `gradle testDebugUnitTest` and `gradle assembleDebug`. No Gradle wrapper is included yet. GitHub Actions is configured to run these checks and publish a debug APK artifact, but a successful build has not yet been verified here.
+Open the project in Android Studio with Android SDK 35 installed and sync Gradle, then run `gradle testDebugUnitTest` and `gradle assembleDebug`. No Gradle wrapper is included yet. GitHub Actions is configured to run tests, lint, and debug/release builds and upload the artifacts. A successful run and physical-device verification have not yet been confirmed here; release artifacts from CI are unsigned and are not ready to publish.
 
 ## Manual device test checklist
 1. Install the debug build and open Matty AI.
