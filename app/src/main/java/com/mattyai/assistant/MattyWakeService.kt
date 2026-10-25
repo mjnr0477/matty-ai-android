@@ -179,20 +179,12 @@ class MattyWakeService : Service() {
         super.onDestroy()
     }
 
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (intent?.action == ACTION_WAKE_HANDLED) {
-            wakeTriggered = false
-            stopSelf()
-            return START_NOT_STICKY
-        }
-        return START_STICKY
-    }
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int = START_STICKY
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     companion object {
         const val EXTRA_WAKE_WORD = "com.mattyai.assistant.WAKE_WORD"
-        const val ACTION_WAKE_HANDLED = "com.mattyai.assistant.ACTION_WAKE_HANDLED"
         private const val CHANNEL_ID = "matty_voice_wake"
         private const val NOTIFICATION_ID = 2407
         @Volatile private var wakeTriggered = false
