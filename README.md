@@ -8,6 +8,8 @@ Matty AI is an independent native Android project. It is separate from Dream Edu
 - Push-to-talk speech recognition. It prefers Android's on-device recognizer when available and requests offline processing.
 - Local allow-listed commands to open installed apps, Wi-Fi / mobile-data / Bluetooth / general settings, music apps, adjust media volume, and navigate Home / Back / notifications / Quick Settings.
 - Accessibility actions are restricted to explicit global navigation actions. Matty does not collect or transmit screen contents.
+- Deterministic local command parser with unit tests for supported commands and unknown-command safety.
+- GitHub Actions workflow runs parser tests, builds a debug APK, and uploads it as a workflow artifact when successful.
 
 ## Important limitations — not production complete yet
 - Always-on “Matty” wake-word listening is **not implemented yet**. The current UI requires tapping **Speak to Matty**. A proper always-on feature needs a dedicated on-device wake-word engine, a foreground service and notification, battery testing, and clear microphone privacy controls.
@@ -18,7 +20,7 @@ Matty AI is an independent native Android project. It is separate from Dream Edu
 - This code has not yet been built with a complete Android SDK toolchain or tested end-to-end on a physical phone. Do not treat it as release-ready.
 
 ## Build
-Open the project in Android Studio with Android SDK 35 installed and sync Gradle, then run assembleDebug. No Gradle wrapper is included yet.
+Open the project in Android Studio with Android SDK 35 installed and sync Gradle, then run `gradle testDebugUnitTest` and `gradle assembleDebug`. No Gradle wrapper is included yet. GitHub Actions is configured to run these checks and publish a debug APK artifact, but a successful build has not yet been verified here.
 
 ## Manual device test checklist
 1. Install the debug build and open Matty AI.
