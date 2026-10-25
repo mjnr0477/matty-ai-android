@@ -25,7 +25,6 @@ import java.util.Locale
 class MattyWakeService : Service() {
     private var recognizer: SpeechRecognizer? = null
     private var listening = false
-    private var wakeLock: PowerManager.WakeLock? = null
     private var screenWakeLock: PowerManager.WakeLock? = null
     private val handler = Handler(Looper.getMainLooper())
     private val retryListening = Runnable { startWakeListening() }
@@ -38,11 +37,6 @@ class MattyWakeService : Service() {
             startForeground(NOTIFICATION_ID, notification, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE)
         } else {
             startForeground(NOTIFICATION_ID, notification)
-        }
-        val pm = getSystemService(POWER_SERVICE) as PowerManager
-        wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "MattyAI:WakePhrase").apply {
-            setReferenceCounted(false)
-            acquire()
         }
         startWakeListening()
     }
@@ -165,11 +159,11 @@ class MattyWakeService : Service() {
         handler.removeCallbacksAndMessages(null)
         try { recognizer?.cancel(); recognizer?.destroy() } catch (_: Exception) {}
         recognizer = null
-        try { if (wakeLock?.isHeld == true) wakeLock?.release() } catch (_: Exception) {}
-        wakeLock = null
         wakeTriggered = false
         super.onDestroy()
     }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int = START_STICKY
 
     override fun onBind(intent: Intent?): IBinder? = null
 
