@@ -463,7 +463,8 @@ class MainActivity : Activity() {
                 try {
                     if (manualModel == null) manualModel = Model(path)
                     stopManualSpeech()
-                    val recognizer = Recognizer(manualModel, 16000.0f)
+                    val loadedModel = manualModel ?: error("Offline speech model is not loaded.")
+                    val recognizer = Recognizer(loadedModel, 16000.0f)
                     manualRecognizer = recognizer
                     manualSpeechService = SpeechService(recognizer, 16000.0f)
                     status.text = "Listening offline… say a command."
