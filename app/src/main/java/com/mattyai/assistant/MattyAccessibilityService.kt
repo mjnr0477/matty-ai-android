@@ -75,7 +75,7 @@ class MattyAccessibilityService : AccessibilityService() {
     }
 
     private fun findEditableNode(node: AccessibilityNodeInfo): AccessibilityNodeInfo? {
-        if (node.isEditable && node.isEnabled) return node
+        if (node.isEditable && node.isEnabled && node.isFocused) return node
         for (i in 0 until node.childCount) {
             val child = node.getChild(i) ?: continue
             val found = findEditableNode(child)
