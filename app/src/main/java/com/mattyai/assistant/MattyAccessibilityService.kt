@@ -4,6 +4,8 @@ import android.accessibilityservice.AccessibilityService
 import android.content.Context
 import android.os.Bundle
 import android.provider.Settings
+import android.text.Spanned
+import android.text.style.URLSpan
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 
@@ -53,7 +55,9 @@ class MattyAccessibilityService : AccessibilityService() {
     private fun findLinkNode(node: AccessibilityNodeInfo): AccessibilityNodeInfo? {
         val label = listOfNotNull(node.text?.toString(), node.contentDescription?.toString())
             .joinToString(" ").trim()
-        val isLinkLabel = label.matches(Regex("(?i).*\\bhttps?://\\S+.*")) ||
+        val hasUrlSpan = (node.text as? Spanned)?.getSpans(0, node.text.length, URLSpan::class.java)?.isNotEmpty() == true
+        val isLinkLabel = hasUrlSpan ||
+            label.matches(Regex("(?i).*\\bhttps?://\\S+.*")) ||
             label.matches(Regex("(?i).*\\bwww\\.\\S+.*")) ||
             node.className?.toString()?.contains("link", ignoreCase = true) == true
         if (isLinkLabel && (node.isClickable || node.parent?.isClickable == true)) return node
