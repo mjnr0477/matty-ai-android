@@ -104,10 +104,18 @@ class MattyWakeService : Service() {
                     val heard = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                         ?.firstOrNull().orEmpty().trim()
                     if (mode == ListenMode.WAKE_PHRASE) {
-                        if (Regex("(?i).*\\bmatty\\b.*").matches(heard)) {
-                            mode = ListenMode.COMMAND
-                            updateNotification("Matty heard you. Say a command now.")
-                            speakThenResume("I'm listening. What should I do?")
+                        val wake = CommandParser.extractWakeCommand(heard)
+                        if (wake.detected) {
+                            if (wake.command.isNotBlank()) {
+                                mode = ListenMode.WAKE_PHRASE
+                                val response = executeSupportedBackgroundCommand(wake.command)
+                                updateNotification(response)
+                                speakThenResume(response)
+                            } else {
+                                mode = ListenMode.COMMAND
+                                updateNotification("Matty heard you. Say a command now.")
+                                speakThenResume("I'm listening. What should I do?")
+                            }
                         } else {
                             handler.postDelayed(retryListening, 350L)
                         }
