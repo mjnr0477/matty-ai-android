@@ -155,7 +155,13 @@ class MattyWakeService : Service() {
                 audio.dispatchMediaKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_UP, android.view.KeyEvent.KEYCODE_MEDIA_PLAY))
                 "Sent play to the active media session."
             }
-            else -> "I heard you say $raw. That action needs Matty open and may require unlocking your phone."
+            MattyCommandType.TAP_TEXT -> MattyAccessibilityService.tapVisibleLabel(command.argument)
+            MattyCommandType.TYPE_TEXT -> MattyAccessibilityService.typeIntoFocusedField(command.argument)
+            MattyCommandType.SCROLL_UP -> MattyAccessibilityService.scroll(false)
+            MattyCommandType.SCROLL_DOWN -> MattyAccessibilityService.scroll(true)
+            MattyCommandType.GO_BACK -> MattyAccessibilityService.goBack()
+            MattyCommandType.GO_HOME -> MattyAccessibilityService.goHome()
+            else -> "I heard you say $raw. This action is not supported in hands-free background mode yet."
         }
     }
 
