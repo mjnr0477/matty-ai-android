@@ -64,6 +64,12 @@ class CommandParserTest {
             CommandParser.parse("open WhatsApp and click the link")
         )
     }
+    @Test fun parsesCommonSocialActionsAsVisibleControlRequests() {
+        assertEquals(ParsedMattyCommand(MattyCommandType.TAP_TEXT, "Like"), CommandParser.parse("Matty like this"))
+        assertEquals(ParsedMattyCommand(MattyCommandType.TAP_TEXT, "Comment"), CommandParser.parse("comment"))
+        assertEquals(ParsedMattyCommand(MattyCommandType.TAP_TEXT, "Share"), CommandParser.parse("share this"))
+        assertEquals(ParsedMattyCommand(MattyCommandType.TAP_TEXT, "Status"), CommandParser.parse("update status"))
+    }
     @Test fun parsesTextEntryLocally() {
         assertEquals(ParsedMattyCommand(MattyCommandType.TYPE_TEXT, "Hello There!"), CommandParser.parse("Matty type Hello There!"))
         assertEquals(ParsedMattyCommand(MattyCommandType.TYPE_TEXT, "good morning"), CommandParser.parse("enter text good morning"))
