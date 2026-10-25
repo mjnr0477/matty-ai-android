@@ -291,20 +291,50 @@ class MainActivity : Activity() {
             intent?.getBooleanExtra(EXTRA_ASSISTANT_INVOKED, false) == true
 
     private fun requestDefaultAssistant() {
-        val roleManager = getSystemService(RoleManager::class.java)
-        if (roleManager == null || !roleManager.isRoleAvailable(RoleManager.ROLE_ASSISTANT)) {
-            status.text = "This Android version does not expose the default assistant role."
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            status.text = "This Android version cannot assign a default assistant from Matty. Check Settings > Apps > Default apps > Assist app."
+            openAssistantSettingsFallback()
             return
         }
-        if (roleManager.isRoleHeld(RoleManager.ROLE_ASSISTANT)) {
-            status.text = "Matty is already your default assistant. Use your phone's assistant gesture to invoke it."
+        val roleManager = getSystemService(RoleManager::class.java)
+        if (roleManager == null) {
+            status.text = "Android's assistant-role service is unavailable. Open Default apps settings and choose Assist app."
+            openAssistantSettingsFallback()
             return
         }
         try {
+            if (!roleManager.isRoleAvailable(RoleManager.ROLE_ASSISTANT)) {
+                status.text = "This phone does not expose assistant selection through the app. Open Default apps settings and check Assist app."
+                openAssistantSettingsFallback()
+                return
+            }
+            if (roleManager.isRoleHeld(RoleManager.ROLE_ASSISTANT)) {
+                assistantButton.text = "Matty is your default assistant ✓"
+                status.text = "Matty is already selected. Use your phone's assistant gesture to invoke it."
+                return
+            }
+            status.text = "Opening Android's assistant chooser. Select Matty AI and confirm."
             startActivityForResult(roleManager.createRequestRoleIntent(RoleManager.ROLE_ASSISTANT), requestAssistantRole)
-        } catch (_: Exception) {
-            status.text = "Android couldn't open the default assistant selection screen."
+        } catch (e: Exception) {
+            status.text = "Android could not open the assistant chooser (" + e.javaClass.simpleName + "). Opening Default apps settings instead."
+            openAssistantSettingsFallback()
         }
+    }
+
+    private fun openAssistantSettingsFallback() {
+        val candidates = listOf(
+            Intent(Settings.ACTION_VOICE_INPUT_SETTINGS),
+            Intent(Settings.ACTION_SETTINGS)
+        )
+        for (settingsIntent in candidates) {
+            try {
+                startActivity(settingsIntent)
+                return
+            } catch (_: Exception) {
+                // Try the next Android settings screen.
+            }
+        }
+        status.text = "Could not open Settings automatically. Open Settings > Apps > Default apps > Digital assistant app and choose Matty AI if listed."
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
