@@ -64,6 +64,18 @@
                 <action android:name="android.service.voice.VoiceInteractionSessionService" />
             </intent-filter>
         </service>
+        <service
+            android:name=".MattyAccessibilityService"
+            android:label="Matty cross-app voice control"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/matty_accessibility_service" />
+        </service>
         <activity android:name=".BluetoothActivity" android:exported="false" android:label="Nearby Bluetooth devices" />
     </application>
 </manifest>
