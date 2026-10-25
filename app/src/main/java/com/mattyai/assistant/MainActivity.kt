@@ -473,7 +473,6 @@ class MainActivity : Activity() {
             MattyCommandType.OPEN_MOBILE_DATA_SETTINGS -> openSettings(Settings.ACTION_DATA_USAGE_SETTINGS, "Opening mobile data settings. Android controls whether data can be switched directly.")
             MattyCommandType.OPEN_BLUETOOTH_SETTINGS -> openSettings(Settings.ACTION_BLUETOOTH_SETTINGS, "Opening Bluetooth settings.")
             MattyCommandType.OPEN_NETWORK_SETTINGS -> openSettings(Settings.ACTION_WIRELESS_SETTINGS, "Opening network settings.")
-            MattyCommandType.OPEN_NOTIFICATIONS -> openSettings(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS, "Opening notification access settings.")
             MattyCommandType.OPEN_QUICK_SETTINGS -> runCrossAppAction { MattyAccessibilityService.openQuickSettings() }
             MattyCommandType.OPEN_NOTIFICATIONS -> runCrossAppAction { MattyAccessibilityService.openNotifications() }
             MattyCommandType.GO_BACK -> runCrossAppAction { MattyAccessibilityService.goBack() }
