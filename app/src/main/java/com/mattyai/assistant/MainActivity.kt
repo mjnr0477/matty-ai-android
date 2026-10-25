@@ -49,7 +49,7 @@ class MainActivity : Activity() {
         super.onResume()
         if (::accessButton.isInitialized) {
             refreshAccessState()
-            ensureWakeService()
+            if (intent?.getBooleanExtra(MattyWakeService.EXTRA_WAKE_WORD, false) != true) ensureWakeService()
             startCommandAfterUnlockIfPossible()
         }
     }
