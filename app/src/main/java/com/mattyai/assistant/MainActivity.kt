@@ -157,7 +157,6 @@ class MainActivity : Activity() {
             }
             .show()
     }
-    }
 
     private fun buildUi() {
         val page = LinearLayout(this).apply {
