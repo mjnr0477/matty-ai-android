@@ -54,6 +54,20 @@ class MattyAccessibilityService : AccessibilityService() {
                 else "Android did not allow the Home action."
         }
 
+        fun openNotifications(): String {
+            val service = activeService ?: return "Enable Matty cross-app voice control in Accessibility settings first."
+            consentMessage(service)?.let { return it }
+            return if (service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_NOTIFICATIONS)) "Opened notifications."
+                else "Android did not allow opening notifications."
+        }
+
+        fun openQuickSettings(): String {
+            val service = activeService ?: return "Enable Matty cross-app voice control in Accessibility settings first."
+            consentMessage(service)?.let { return it }
+            return if (service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_QUICK_SETTINGS)) "Opened Quick Settings."
+                else "Android did not allow opening Quick Settings."
+        }
+
         fun tapVisibleLabel(label: String): String {
             val service = activeService ?: return "Enable Matty cross-app voice control in Accessibility settings first."
             consentMessage(service)?.let { return it }
@@ -77,6 +91,20 @@ class MattyAccessibilityService : AccessibilityService() {
             } else {
                 "Android did not allow Matty to tap $cleaned."
             }
+        }
+
+        fun longPressVisibleLabel(label: String): String {
+            val service = activeService ?: return "Enable Matty cross-app voice control in Accessibility settings first."
+            consentMessage(service)?.let { return it }
+            val cleaned = label.trim()
+            if (cleaned.isEmpty()) return "Tell Matty the exact visible label to press and hold."
+            val root = service.rootInActiveWindow ?: return "No active app screen is available to Matty."
+            val matches = try { root.findAccessibilityNodeInfosByText(cleaned).orEmpty() } catch (_: Exception) { emptyList() }
+            val targets = matches.filter { it.isLongClickable }
+            if (targets.size != 1) return if (targets.isEmpty()) "I couldn't find one long-press target named $cleaned."
+                else "I found more than one long-press target named $cleaned. Be more specific."
+            return if (targets.single().performAction(AccessibilityNodeInfo.ACTION_LONG_CLICK)) "Pressed and held $cleaned."
+                else "Android did not allow a long press on $cleaned."
         }
 
         fun typeIntoFocusedField(value: String): String {
