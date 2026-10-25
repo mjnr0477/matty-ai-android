@@ -17,6 +17,7 @@ import android.os.Bundle
 import android.provider.Settings
 import android.net.Uri
 import android.app.KeyguardManager
+import android.app.role.RoleManager
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
@@ -38,13 +39,19 @@ class MainActivity : Activity() {
     private lateinit var accessButton: Button
     private var recognizer: SpeechRecognizer? = null
     private val requestAudio = 501
+    private val requestAssistantRole = 502
+    private lateinit var assistantButton: Button
+
+    companion object {
+        const val EXTRA_ASSISTANT_INVOKED = "com.mattyai.assistant.ASSISTANT_INVOKED"
+    }
     private val ink = Color.rgb(20, 27, 45)
     private val muted = Color.rgb(103, 116, 140)
     private val purple = Color.rgb(103, 80, 232)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        if (intent?.getBooleanExtra(MattyWakeService.EXTRA_WAKE_WORD, false) == true) {
+        if (isVoiceInvocation()) {
             window.addFlags(WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON or WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED)
         }
         window.statusBarColor = Color.rgb(247, 248, 255)
@@ -59,7 +66,7 @@ class MainActivity : Activity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        if (intent.getBooleanExtra(MattyWakeService.EXTRA_WAKE_WORD, false)) {
+        if (isVoiceInvocation()) {
             window.addFlags(WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON or WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED)
         }
         stopWakeServiceForWakeIntent()
@@ -70,7 +77,7 @@ class MainActivity : Activity() {
         super.onResume()
         if (::accessButton.isInitialized) {
             refreshAccessState()
-            if (intent?.getBooleanExtra(MattyWakeService.EXTRA_WAKE_WORD, false) != true) ensureWakeService()
+            if (!isVoiceInvocation()) ensureWakeService()
             startCommandAfterUnlockIfPossible()
         }
     }
@@ -81,13 +88,14 @@ class MainActivity : Activity() {
     }
 
     private fun startCommandAfterUnlockIfPossible() {
-        if (intent?.getBooleanExtra(MattyWakeService.EXTRA_WAKE_WORD, false) != true) return
+        if (!isVoiceInvocation()) return
         val keyguard = getSystemService(KEYGUARD_SERVICE) as KeyguardManager
         if (keyguard.isKeyguardLocked) {
             status.text = "Unlock your phone, then speak your command."
             return
         }
         intent?.removeExtra(MattyWakeService.EXTRA_WAKE_WORD)
+        intent?.removeExtra(EXTRA_ASSISTANT_INVOKED)
         status.text = "Matty heard you. Tell me what to do."
         Handler(Looper.getMainLooper()).postDelayed({
             if (!isFinishing && !isDestroyed &&
@@ -98,7 +106,7 @@ class MainActivity : Activity() {
     }
 
     private fun stopWakeServiceForWakeIntent() {
-        if (intent?.getBooleanExtra(MattyWakeService.EXTRA_WAKE_WORD, false) == true) {
+        if (isVoiceInvocation()) {
             try { stopService(Intent(this, MattyWakeService::class.java)) } catch (_: Exception) { }
         }
     }
@@ -169,7 +177,20 @@ class MainActivity : Activity() {
             background = rounded(ink, 16); setOnClickListener { beginAccessSetup() }
         }
         accessCard.addView(accessButton, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(50)))
+
         page.addView(accessCard, params(bottom = 12))
+
+        assistantButton = Button(this).apply {
+            text = "Set Matty as default assistant"
+            isAllCaps = false
+            textSize = 14f
+            setTextColor(Color.WHITE)
+            background = rounded(purple, 16)
+            setOnClickListener { requestDefaultAssistant() }
+        }
+        page.addView(assistantButton, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(50)).apply {
+            bottomMargin = dp(10)
+        })
 
         val bluetoothButton = Button(this).apply {
             text = "Find and pair Bluetooth devices"; isAllCaps = false; textSize = 14f
@@ -203,6 +224,39 @@ class MainActivity : Activity() {
         setContentView(scroll)
     }
 
+
+    private fun isVoiceInvocation(): Boolean =
+        intent?.getBooleanExtra(MattyWakeService.EXTRA_WAKE_WORD, false) == true ||
+            intent?.getBooleanExtra(EXTRA_ASSISTANT_INVOKED, false) == true
+
+    private fun requestDefaultAssistant() {
+        val roleManager = getSystemService(RoleManager::class.java)
+        if (roleManager == null || !roleManager.isRoleAvailable(RoleManager.ROLE_ASSISTANT)) {
+            status.text = "This Android version does not expose the default assistant role."
+            return
+        }
+        if (roleManager.isRoleHeld(RoleManager.ROLE_ASSISTANT)) {
+            status.text = "Matty is already your default assistant. Use your phone's assistant gesture to invoke it."
+            return
+        }
+        try {
+            startActivityForResult(roleManager.createRequestRoleIntent(RoleManager.ROLE_ASSISTANT), requestAssistantRole)
+        } catch (_: Exception) {
+            status.text = "Android couldn't open the default assistant selection screen."
+        }
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == requestAssistantRole) {
+            val roleManager = getSystemService(RoleManager::class.java)
+            val held = roleManager?.isRoleHeld(RoleManager.ROLE_ASSISTANT) == true
+            assistantButton.text = if (held) "Matty is your default assistant ✓" else "Set Matty as default assistant"
+            status.text = if (held) "Matty is selected. Android controls how the assistant is invoked on this phone."
+                else "Matty was not selected as the default assistant."
+        }
+    }
+
     private fun beginAccessSetup() {
         val needed = mutableListOf<String>()
         if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
@@ -228,6 +282,9 @@ class MainActivity : Activity() {
     private fun refreshAccessState() {
         val mic = checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
         accessButton.text = if (!mic) "Allow microphone access" else "Voice access enabled ✓"
+        val roleManager = getSystemService(RoleManager::class.java)
+        assistantButton.text = if (roleManager?.isRoleHeld(RoleManager.ROLE_ASSISTANT) == true)
+            "Matty is your default assistant ✓" else "Set Matty as default assistant"
         status.text = if (!mic) "Microphone permission is needed for voice commands."
             else "Matty is ready for supported voice commands. Say “Matty” to begin."
     }
