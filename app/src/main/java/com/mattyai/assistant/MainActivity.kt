@@ -38,6 +38,7 @@ class MainActivity : Activity() {
     private lateinit var transcript: TextView
     private lateinit var accessButton: Button
     private var recognizer: SpeechRecognizer? = null
+    private var assistantInvocationActive = false
     private val requestAudio = 501
     private val requestAssistantRole = 502
     private lateinit var assistantButton: Button
@@ -51,6 +52,8 @@ class MainActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        assistantInvocationActive = intent?.getBooleanExtra(EXTRA_ASSISTANT_INVOKED, false) == true ||
+            intent?.getBooleanExtra(MattyWakeService.EXTRA_WAKE_WORD, false) == true
         if (isVoiceInvocation()) {
             window.addFlags(WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON or WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED)
         }
@@ -66,6 +69,8 @@ class MainActivity : Activity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        assistantInvocationActive = intent.getBooleanExtra(EXTRA_ASSISTANT_INVOKED, false) ||
+            intent.getBooleanExtra(MattyWakeService.EXTRA_WAKE_WORD, false)
         if (isVoiceInvocation()) {
             window.addFlags(WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON or WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED)
         }
@@ -226,7 +231,7 @@ class MainActivity : Activity() {
 
 
     private fun isVoiceInvocation(): Boolean =
-        intent?.getBooleanExtra(MattyWakeService.EXTRA_WAKE_WORD, false) == true ||
+        assistantInvocationActive || intent?.getBooleanExtra(MattyWakeService.EXTRA_WAKE_WORD, false) == true ||
             intent?.getBooleanExtra(EXTRA_ASSISTANT_INVOKED, false) == true
 
     private fun requestDefaultAssistant() {
@@ -333,6 +338,7 @@ class MainActivity : Activity() {
             status.text = "Offline speech recognition is unavailable. Install an on-device speech service and download your language pack; Matty will not use cloud speech."
             return
         }
+        assistantInvocationActive = false
         recognizer?.destroy()
         recognizer = try {
             SpeechRecognizer.createOnDeviceSpeechRecognizer(this)
