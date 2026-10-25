@@ -57,7 +57,7 @@ class MattyWakeService : Service() {
         tts = TextToSpeech(applicationContext) { result ->
             ttsReady = result == TextToSpeech.SUCCESS
             if (ttsReady) {
-                tts?.language = Locale.getDefault()
+                tts?.language = selectedVoiceLocale()
                 tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
                     override fun onStart(utteranceId: String?) = Unit
                     override fun onDone(utteranceId: String?) {
@@ -74,6 +74,13 @@ class MattyWakeService : Service() {
             }
         }
         startListening()
+    }
+
+    private fun selectedVoiceLocale(): Locale {
+        val tag = getSharedPreferences("matty_settings", MODE_PRIVATE)
+            .getString("voice_language", Locale.getDefault().toLanguageTag())
+            ?: Locale.getDefault().toLanguageTag()
+        return Locale.forLanguageTag(tag)
     }
 
     private fun startListening() {
@@ -136,7 +143,7 @@ class MattyWakeService : Service() {
             })
             val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
                 putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
+                putExtra(RecognizerIntent.EXTRA_LANGUAGE, selectedVoiceLocale().toLanguageTag())
                 putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
                 putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false)
                 putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
