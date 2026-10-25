@@ -15,7 +15,14 @@ object CommandParser {
         val original = raw.trim().replace(Regex("(?i)^(hey\\s+)?matty[ ,]*"), "").trim()
         val command = original.lowercase()
         return when {
-            command.startsWith("tap ") || command.startsWith("click ") -> ParsedMattyCommand(MattyCommandType.TAP_TEXT, original.substringAfter(" ").trim())
+            command.startsWith("don't ") || command.startsWith("do not ") || command.startsWith("never ") ->
+                ParsedMattyCommand(MattyCommandType.UNKNOWN)
+            command.startsWith("tap ") || command.startsWith("click ") ->
+                ParsedMattyCommand(
+                    MattyCommandType.TAP_TEXT,
+                    original.replace(Regex("(?i)^(tap|click)\\s+(on\\s+)?(the\\s+)?"), "")
+                        .replace(Regex("(?i)\\s+button$"), "").trim()
+                )
             command.startsWith("enter text ") -> ParsedMattyCommand(MattyCommandType.TYPE_TEXT, original.replace(Regex("(?i)^enter text\\s+"), "").trim())
             command.startsWith("type ") -> ParsedMattyCommand(MattyCommandType.TYPE_TEXT, original.replace(Regex("(?i)^type\\s+"), "").trim())
             command.contains("scroll down") || command == "swipe up" -> ParsedMattyCommand(MattyCommandType.SCROLL_DOWN)
