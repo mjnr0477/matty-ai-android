@@ -6,6 +6,9 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.provider.Settings
 import android.media.AudioManager
 import android.os.Build
 import android.os.Bundle
@@ -161,6 +164,16 @@ class MattyWakeService : Service() {
             MattyCommandType.SCROLL_DOWN -> MattyAccessibilityService.scroll(true)
             MattyCommandType.GO_BACK -> MattyAccessibilityService.goBack()
             MattyCommandType.GO_HOME -> MattyAccessibilityService.goHome()
+            MattyCommandType.OPEN_APP, MattyCommandType.OPEN_APP_AND_CLICK_LINK -> launchInstalledApp(command.argument)
+            MattyCommandType.OPEN_SYSTEM_SETTINGS -> launchIntent(Intent(Settings.ACTION_SETTINGS), "Opening Android Settings.")
+            MattyCommandType.OPEN_WIFI_SETTINGS -> launchIntent(Intent(Settings.ACTION_WIFI_SETTINGS), "Opening Wi-Fi settings.")
+            MattyCommandType.OPEN_MOBILE_DATA_SETTINGS -> launchIntent(Intent(Settings.ACTION_DATA_USAGE_SETTINGS), "Opening mobile data settings.")
+            MattyCommandType.OPEN_BLUETOOTH_SETTINGS -> launchIntent(Intent(Settings.ACTION_BLUETOOTH_SETTINGS), "Opening Bluetooth settings.")
+            MattyCommandType.OPEN_NETWORK_SETTINGS -> launchIntent(Intent(Settings.ACTION_WIRELESS_SETTINGS), "Opening network settings.")
+            MattyCommandType.OPEN_NOTIFICATIONS -> launchIntent(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS), "Opening notification access settings.")
+            MattyCommandType.SEARCH_WEB -> launchIntent(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/search?q=" + Uri.encode(command.argument))), "Searching the web for ${command.argument}.")
+            MattyCommandType.INSTALL_APP -> launchIntent(Intent(Intent.ACTION_VIEW, Uri.parse("market://search?q=" + Uri.encode(command.argument))), "Opening the app store search for ${command.argument}.")
+            MattyCommandType.OPEN_MUSIC -> launchMusic()
             else -> "I heard you say $raw. This action is not supported in hands-free background mode yet."
         }
     }
@@ -170,6 +183,57 @@ class MattyWakeService : Service() {
      * recognizer can hear its own reply and mistake it for the next command.
      * A timeout is retained because some Android TTS engines omit completion callbacks.
      */
+
+    private fun launchIntent(intent: Intent, successMessage: String): String {
+        return try {
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            startActivity(intent)
+            successMessage
+        } catch (_: Exception) {
+            "Android blocked opening that screen from background listening. Invoke Matty through the system assistant and try again."
+        }
+    }
+
+    private fun launchInstalledApp(rawName: String): String {
+        val name = rawName.removePrefix("the ").trim()
+        if (name.isBlank()) return "Tell me the name of the app to open."
+        val aliases = mapOf(
+            "browser" to listOf("Chrome", "Browser"),
+            "messages" to listOf("Messages", "Messaging"),
+            "camera" to listOf("Camera"),
+            "phone" to listOf("Phone", "Dialer"),
+            "music" to listOf("Spotify", "YouTube Music", "Music", "VLC"),
+            "settings" to listOf("Settings")
+        )
+        val names = aliases[name.lowercase()] ?: listOf(name)
+        return try {
+            val pm = packageManager
+            val apps = pm.getInstalledApplications(PackageManager.GET_META_DATA)
+            for (candidate in names) {
+                val match = apps.firstOrNull { pm.getApplicationLabel(it).toString().equals(candidate, true) }
+                    ?: apps.firstOrNull { pm.getApplicationLabel(it).toString().contains(candidate, true) }
+                val launch = match?.let { pm.getLaunchIntentForPackage(it.packageName) }
+                if (launch != null) return launchIntent(launch, "Opening $candidate.")
+            }
+            "I couldn't find an installed app matching $name."
+        } catch (_: Exception) {
+            "Android blocked opening $name from background listening. Invoke Matty through the system assistant and try again."
+        }
+    }
+
+    private fun launchMusic(): String {
+        val musicIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_APP_MUSIC)
+        if (musicIntent.resolveActivity(packageManager) != null) {
+            return launchIntent(musicIntent, "Opening a music app.")
+        }
+        val audioIntent = Intent(Intent.ACTION_VIEW).setType("audio/*")
+        return if (audioIntent.resolveActivity(packageManager) != null) {
+            launchIntent(audioIntent, "Opening a compatible music player.")
+        } else {
+            "No compatible music app was found."
+        }
+    }
+
     private fun speakThenResume(message: String) {
         handler.removeCallbacks(retryListening)
         listening = false
