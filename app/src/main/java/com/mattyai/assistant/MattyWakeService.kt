@@ -25,6 +25,7 @@ import java.util.Locale
 class MattyWakeService : Service() {
     private var recognizer: SpeechRecognizer? = null
     private var listening = false
+    private var retryCount = 0
     private var screenWakeLock: PowerManager.WakeLock? = null
     private val handler = Handler(Looper.getMainLooper())
     private val retryListening = Runnable { startWakeListening() }
@@ -52,14 +53,18 @@ class MattyWakeService : Service() {
             recognizer?.destroy()
             recognizer = SpeechRecognizer.createOnDeviceSpeechRecognizer(this)
             recognizer?.setRecognitionListener(object : RecognitionListener {
-                override fun onReadyForSpeech(params: Bundle?) { listening = true }
+                override fun onReadyForSpeech(params: Bundle?) { listening = true; retryCount = 0 }
                 override fun onBeginningOfSpeech() {}
                 override fun onRmsChanged(rmsdB: Float) {}
                 override fun onBufferReceived(buffer: ByteArray?) {}
                 override fun onEndOfSpeech() { listening = false }
                 override fun onError(error: Int) {
                     listening = false
-                    if (!wakeTriggered) handler.postDelayed(retryListening, 900L)
+                    if (!wakeTriggered) {
+                        val delayMs = minOf(900L * (1L shl retryCount.coerceAtMost(4)), 15_000L)
+                        retryCount = (retryCount + 1).coerceAtMost(4)
+                        handler.postDelayed(retryListening, delayMs)
+                    }
                 }
                 override fun onResults(results: Bundle?) {
                     listening = false
@@ -156,6 +161,7 @@ class MattyWakeService : Service() {
 
     override fun onDestroy() {
         listening = false
+        retryCount = 0
         handler.removeCallbacksAndMessages(null)
         try { recognizer?.cancel(); recognizer?.destroy() } catch (_: Exception) {}
         recognizer = null
