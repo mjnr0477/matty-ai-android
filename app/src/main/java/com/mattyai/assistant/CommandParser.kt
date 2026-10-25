@@ -5,7 +5,7 @@ enum class MattyCommandType {
     OPEN_WIFI_SETTINGS, OPEN_MOBILE_DATA_SETTINGS, OPEN_BLUETOOTH_SETTINGS,
     OPEN_NETWORK_SETTINGS, OPEN_NOTIFICATIONS, OPEN_QUICK_SETTINGS,
     GO_BACK, GO_HOME, VOLUME_DOWN, VOLUME_UP, START_PLAYBACK,
-    OPEN_MUSIC, OPEN_APP, UNKNOWN
+    OPEN_MUSIC, OPEN_APP, TAP_TEXT, TYPE_TEXT, SCROLL_UP, SCROLL_DOWN, UNKNOWN
 }
 
 data class ParsedMattyCommand(val type: MattyCommandType, val argument: String = "")
@@ -26,6 +26,10 @@ object CommandParser {
             command.contains("go home") || command == "home" -> ParsedMattyCommand(MattyCommandType.GO_HOME)
             command.contains("volume down") || command.contains("turn down volume") || command.contains("lower volume") -> ParsedMattyCommand(MattyCommandType.VOLUME_DOWN)
             command.contains("volume up") || command.contains("turn up volume") || command.contains("raise volume") -> ParsedMattyCommand(MattyCommandType.VOLUME_UP)
+            command.startsWith("tap ") || command.startsWith("click ") -> ParsedMattyCommand(MattyCommandType.TAP_TEXT, command.substringAfter(" ").trim())
+            command.startsWith("type ") || command.startsWith("enter text ") -> ParsedMattyCommand(MattyCommandType.TYPE_TEXT, command.substringAfter(" ").trim())
+            command.contains("scroll down") || command == "swipe up" -> ParsedMattyCommand(MattyCommandType.SCROLL_DOWN)
+            command.contains("scroll up") || command == "swipe down" -> ParsedMattyCommand(MattyCommandType.SCROLL_UP)
             command.contains("start this song") || command == "start song" -> ParsedMattyCommand(MattyCommandType.START_PLAYBACK)
             command.contains("play music") || command.contains("start music") || command.startsWith("play ") || command.contains("open music") -> ParsedMattyCommand(MattyCommandType.OPEN_MUSIC)
             command.startsWith("open ") || command.startsWith("launch ") || command.startsWith("start ") ->
