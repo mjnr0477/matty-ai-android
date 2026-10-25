@@ -5,7 +5,7 @@ enum class MattyCommandType {
     OPEN_SYSTEM_SETTINGS, OPEN_WIFI_SETTINGS, OPEN_MOBILE_DATA_SETTINGS, OPEN_BLUETOOTH_SETTINGS,
     OPEN_NETWORK_SETTINGS, OPEN_NOTIFICATIONS, OPEN_QUICK_SETTINGS,
     GO_BACK, GO_HOME, VOLUME_DOWN, VOLUME_UP, START_PLAYBACK,
-    OPEN_MUSIC, OPEN_APP, INSTALL_APP, SEARCH_WEB, OPEN_APP_AND_CLICK_LINK, TAP_TEXT, CLICK_FIRST_LINK, TYPE_TEXT, SCROLL_UP, SCROLL_DOWN, UNKNOWN
+    OPEN_MUSIC, OPEN_APP, INSTALL_APP, SEARCH_WEB, OPEN_APP_AND_CLICK_LINK, TAP_TEXT, LONG_PRESS_TEXT, CLICK_FIRST_LINK, TYPE_TEXT, SCROLL_UP, SCROLL_DOWN, UNKNOWN
 }
 
 data class ParsedMattyCommand(val type: MattyCommandType, val argument: String = "")
@@ -66,6 +66,10 @@ object CommandParser {
                         else -> original.replaceFirstChar { it.uppercase() }
                     }
                 )
+            command.startsWith("long press ") || command.startsWith("press and hold ") -> ParsedMattyCommand(
+                MattyCommandType.LONG_PRESS_TEXT,
+                original.replace(Regex("(?i)^(long press|press and hold)\\s+(the\\s+)?"), "").trim()
+            )
             command.startsWith("tap ") || command.startsWith("click ") ->
                 ParsedMattyCommand(
                     MattyCommandType.TAP_TEXT,
