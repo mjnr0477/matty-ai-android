@@ -61,7 +61,7 @@ class MattyWakeService : Service() {
                 override fun onError(error: Int) {
                     listening = false
                     if (!wakeTriggered) {
-                        val delayMs = minOf(900L * (1L shl retryCount.coerceAtMost(4)), 15_000L)
+                        val delayMs = minOf(900L * (1 shl retryCount.coerceAtMost(4)).toLong(), 15_000L)
                         retryCount = (retryCount + 1).coerceAtMost(4)
                         handler.postDelayed(retryListening, delayMs)
                     }
