@@ -2,7 +2,6 @@
 
 Matty AI is an independent native Android project. It is separate from Dream Education and Dream Wi-Fi.
 
-
 ## Cross-app command flow
 
 After microphone permission and Matty's Accessibility Service are enabled, the intended flow is:
@@ -15,6 +14,7 @@ After microphone permission and Matty's Accessibility Service are enabled, the i
 Link activation depends on the target app exposing the link through Android's accessibility tree. Some custom-rendered screens do not expose links or controls, and Matty must report failure rather than claim the tap succeeded. These cross-app flows still require real-device tests in WhatsApp and other target apps.
 
 ## Current implementation
+
 - Refreshed native UI with a guided **Allow Matty to access my phone** setup action.
 - Microphone permission flow and separate Android Accessibility Settings step. Android does not let an app silently grant itself all permissions.
 - Offline-only wake-phrase service prototype using Android on-device speech recognition, a microphone foreground-service notification, and a short screen-wake attempt. It refuses to use cloud recognition for speech.
@@ -24,20 +24,34 @@ Link activation depends on the target app exposing the link through Android's ac
 - **“Search for [query]”** opens a browser web search. This specific action requires an internet connection; core command parsing remains local.
 - Accessibility is opt-in. For tap, text-entry, and scroll commands, Matty returns to the app underneath before performing the requested action so it does not accidentally target its own setup screen. It inspects the current accessibility node tree in memory only for that action; it does not save or transmit screen contents.
 - Deterministic local command parser with unit tests for supported commands and unknown-command safety.
-- GitHub Actions runs parser tests and Android lint, then builds a debug APK plus unsigned release APK/AAB artifacts. Unsigned release artifacts still need secure signing before distribution.
+- GitHub Actions runs parser tests and Android lint, then builds a debug APK and release APK/AAB. When all four release secrets are configured, the release artifacts are signed and the APK signature is verified.
+
+## Release signing secrets
+
+In GitHub repository **Settings → Secrets and variables → Actions**, configure these repository secrets:
+
+- `ANDROID_KEYSTORE_BASE64`: Base64-encoded contents of the release `.jks` keystore.
+- `ANDROID_KEYSTORE_PASSWORD`: keystore password.
+- `ANDROID_KEY_ALIAS`: key alias in the keystore.
+- `ANDROID_KEY_PASSWORD`: private-key password.
+
+The workflow decodes the keystore into the runner's temporary directory and does not commit it to the repository. Keep a secure backup of the original keystore and passwords. Never paste them into issues, logs, or source files. If the Base64 secret is absent, CI can still create unsigned release artifacts; those are not ready to publish.
 
 ## Important limitations — not production complete yet
+
 - The wake phrase is a **prototype, not production-verified**. Android SpeechRecognizer is not a dedicated low-power hotword engine; it may stop, be killed by battery management, fail to bring Matty forward while locked, or behave differently across manufacturers. A production release needs a dedicated offline keyword-spotting engine and physical-device screen-off, false-trigger, and battery tests.
 - Android usually does not allow third-party apps to toggle mobile data directly. Matty opens the relevant settings page instead.
 - Specific-song playback depends on the installed music app, its APIs, and track availability. This prototype opens a compatible player; it does not guarantee starting an arbitrary song.
 - Accessibility access is a separate, explicit system opt-in. One button cannot grant all Android permissions.
 - Cloud AI is intentionally not wired in. Command matching is local; speech recognition works offline only when Android provides an on-device recognizer with the required downloaded language pack. This build deliberately stops the wake service rather than silently falling back to online recognition. The current app targets Android 12+ because it relies on Android on-device SpeechRecognizer.
-- This code has not yet been built with a complete Android SDK toolchain or tested end-to-end on a physical phone. Do not treat it as release-ready.
+- A CI build passing does not prove the app works reliably on a physical phone. Device verification is required before calling it production-ready.
 
 ## Build
-Open the project in Android Studio with Android SDK 35 installed and sync Gradle, then run `gradle testDebugUnitTest` and `gradle assembleDebug`. No Gradle wrapper is included yet. GitHub Actions is configured to run tests, lint, and debug/release builds and upload the artifacts. A successful run and physical-device verification have not yet been confirmed here; release artifacts from CI are unsigned and are not ready to publish.
+
+Open the project in Android Studio with Android SDK 35 installed and sync Gradle, then run `gradle testDebugUnitTest` and `gradle assembleDebug`. No Gradle wrapper is included yet. GitHub Actions builds and uploads artifacts after tests and lint. Download the APK/AAB from the successful Actions run's **Artifacts** section.
 
 ## Manual device test checklist
+
 1. Install the debug build and open Matty AI.
 2. Tap **Allow Matty to access my phone** and grant microphone and notification permissions.
 3. Enable **Matty AI phone control** under Android Settings → Accessibility, then return to Matty.
