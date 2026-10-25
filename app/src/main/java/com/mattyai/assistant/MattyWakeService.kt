@@ -86,14 +86,19 @@ class MattyWakeService : Service() {
     private fun startListening() {
         if (listening) return
         handler.removeCallbacks(retryListening)
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || !SpeechRecognizer.isOnDeviceRecognitionAvailable(this)) {
-            updateNotification("Offline speech unavailable. Install an on-device speech service and language pack.")
+        val offlineAvailable = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+            SpeechRecognizer.isOnDeviceRecognitionAvailable(this)
+        val fallbackAccepted = getSharedPreferences("matty_settings", MODE_PRIVATE)
+            .getBoolean("online_speech_fallback_accepted", false)
+        if (!offlineAvailable && !fallbackAccepted) {
+            updateNotification("Speech unavailable. Open Matty to choose a speech-recognition option.")
             stopSelf()
             return
         }
         try {
             recognizer?.destroy()
-            recognizer = SpeechRecognizer.createOnDeviceSpeechRecognizer(this)
+            recognizer = if (offlineAvailable) SpeechRecognizer.createOnDeviceSpeechRecognizer(this)
+                else SpeechRecognizer.createSpeechRecognizer(this)
             recognizer?.setRecognitionListener(object : RecognitionListener {
                 override fun onReadyForSpeech(params: Bundle?) { listening = true; retryCount = 0 }
                 override fun onBeginningOfSpeech() {}
@@ -144,7 +149,7 @@ class MattyWakeService : Service() {
             val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
                 putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
                 putExtra(RecognizerIntent.EXTRA_LANGUAGE, selectedVoiceLocale().toLanguageTag())
-                putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
+                putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, offlineAvailable)
                 putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false)
                 putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
             }
