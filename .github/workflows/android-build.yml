@@ -36,7 +36,7 @@ jobs:
           fi
           test -x "$SDKMANAGER"
           yes | "$SDKMANAGER" --licenses >/dev/null || true
-          "$SDKMANAGER" 'platforms;android-35' 'build-tools;35.0.0'
+          "$SDKMANAGER" 'platforms;android-36' 'build-tools;36.0.0'
       - name: Configure release signing key
         if: env.HAS_RELEASE_KEY == 'true'
         env:
@@ -54,7 +54,7 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '8.9'
+          gradle-version: '8.11.1'
       - name: Run command parser tests
         run: gradle testDebugUnitTest
       - name: Run Android lint
@@ -70,7 +70,7 @@ jobs:
           set -euo pipefail
           APK="app/build/outputs/apk/release/app-release.apk"
           test -s "$APK"
-          APKSIGNER="${ANDROID_HOME:-/usr/local/lib/android/sdk}/build-tools/35.0.0/apksigner"
+          APKSIGNER="${ANDROID_HOME:-/usr/local/lib/android/sdk}/build-tools/36.0.0/apksigner"
           "$APKSIGNER" verify --verbose "$APK"
       - name: Verify release AAB signing
         if: env.HAS_RELEASE_KEY == 'true'
