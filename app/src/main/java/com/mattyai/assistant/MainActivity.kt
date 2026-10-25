@@ -84,6 +84,10 @@ class MainActivity : Activity() {
     private fun ensureWakeService() {
         if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED ||
             !MattyAccessibilityService.isEnabled(this)) return
+        if (!SpeechRecognizer.isOnDeviceRecognitionAvailable(this)) {
+            if (::status.isInitialized) status.text = "This phone has no available on-device speech recognizer. Install an offline speech service and language pack; Matty will not use online speech."
+            return
+        }
         try {
             val serviceIntent = Intent(this, MattyWakeService::class.java)
             if (Build.VERSION.SDK_INT >= 26) startForegroundService(serviceIntent) else startService(serviceIntent)
