@@ -56,6 +56,9 @@ class MainActivity : Activity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        if (intent.getBooleanExtra(MattyWakeService.EXTRA_WAKE_WORD, false)) {
+            window.addFlags(WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON or WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED)
+        }
         stopWakeServiceForWakeIntent()
         startCommandAfterUnlockIfPossible()
     }
