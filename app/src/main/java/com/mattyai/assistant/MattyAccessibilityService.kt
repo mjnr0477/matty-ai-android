@@ -55,7 +55,10 @@ class MattyAccessibilityService : AccessibilityService() {
     private fun findLinkNode(node: AccessibilityNodeInfo): AccessibilityNodeInfo? {
         val label = listOfNotNull(node.text?.toString(), node.contentDescription?.toString())
             .joinToString(" ").trim()
-        val hasUrlSpan = (node.text as? Spanned)?.getSpans(0, node.text.length, URLSpan::class.java)?.isNotEmpty() == true
+        val nodeText = node.text
+        val hasUrlSpan = (nodeText as? Spanned)?.let {
+            it.getSpans(0, it.length, URLSpan::class.java).isNotEmpty()
+        } == true
         val isLinkLabel = hasUrlSpan ||
             label.matches(Regex("(?i).*\\bhttps?://\\S+.*")) ||
             label.matches(Regex("(?i).*\\bwww\\.\\S+.*")) ||
