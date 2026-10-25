@@ -163,7 +163,7 @@ class MainActivity : Activity() {
         accessCard.addView(text("One setup, then you're ready", 17f, ink, true), params(bottom = 6))
         accessCard.addView(text("Android will ask for microphone and nearby Bluetooth permissions when needed. Bluetooth scanning and pairing are optional.", 13f, muted, false), params(bottom = 14))
         accessButton = Button(this).apply {
-            text = "Allow Matty to access my phone"; isAllCaps = false; textSize = 14f; setTextColor(Color.WHITE)
+            text = "Allow microphone access"; isAllCaps = false; textSize = 14f; setTextColor(Color.WHITE)
             background = rounded(ink, 16); setOnClickListener { beginAccessSetup() }
         }
         accessCard.addView(accessButton, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(50)))
