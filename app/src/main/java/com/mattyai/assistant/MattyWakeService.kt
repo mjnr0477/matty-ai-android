@@ -32,6 +32,7 @@ class MattyWakeService : Service() {
     private enum class ListenMode { WAKE_PHRASE, COMMAND }
 
     private var speechService: SpeechService? = null
+    private var speechRecognizer: Recognizer? = null
     private var model: Model? = null
     private var modelLoading = false
     private var listening = false
@@ -118,6 +119,7 @@ class MattyWakeService : Service() {
         }
         try {
             val recognizer = Recognizer(model, 16000.0f)
+            speechRecognizer = recognizer
             speechService = SpeechService(recognizer, 16000.0f)
             handlingUtterance = false
             listening = speechService?.startListening(object : RecognitionListener {
@@ -189,6 +191,8 @@ class MattyWakeService : Service() {
         try { speechService?.stop() } catch (_: Exception) { }
         try { speechService?.shutdown() } catch (_: Exception) { }
         speechService = null
+        try { speechRecognizer?.close() } catch (_: Exception) { }
+        speechRecognizer = null
     }
 
     private fun executeSupportedBackgroundCommand(raw: String): String {
