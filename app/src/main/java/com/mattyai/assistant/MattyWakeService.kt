@@ -184,7 +184,11 @@ class MattyWakeService : Service() {
             MattyCommandType.SWIPE_RIGHT -> MattyAccessibilityService.swipeRight()
             MattyCommandType.GO_BACK -> MattyAccessibilityService.goBack()
             MattyCommandType.GO_HOME -> MattyAccessibilityService.goHome()
-            MattyCommandType.OPEN_APP, MattyCommandType.OPEN_APP_AND_CLICK_LINK -> launchInstalledApp(command.argument)
+            MattyCommandType.OPEN_APP -> launchInstalledApp(command.argument)
+            MattyCommandType.OPEN_APP_AND_CLICK_LINK -> {
+                launchInstalledApp(command.argument)
+                "Opened ${command.argument}. Say “Matty, tap” followed by the exact visible link label so I can target the right link."
+            }
             MattyCommandType.OPEN_SYSTEM_SETTINGS -> launchIntent(Intent(Settings.ACTION_SETTINGS), "Opening Android Settings.")
             MattyCommandType.OPEN_WIFI_SETTINGS -> launchIntent(Intent(Settings.ACTION_WIFI_SETTINGS), "Opening Wi-Fi settings.")
             MattyCommandType.OPEN_MOBILE_DATA_SETTINGS -> launchIntent(Intent(Settings.ACTION_DATA_USAGE_SETTINGS), "Opening mobile data settings.")
