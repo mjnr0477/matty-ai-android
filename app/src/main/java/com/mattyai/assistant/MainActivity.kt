@@ -157,7 +157,7 @@ class MainActivity : Activity() {
         page.addView(text("MEET YOUR PERSONAL ASSISTANT", 11f, purple, true), params(bottom = 8))
         val headline = text("Just say it.\nMatty gets it done.", 34f, ink, true).apply { setLineSpacing(dp(1).toFloat(), 1f) }
         page.addView(headline, params(bottom = 10))
-        page.addView(text("Use voice or type a command to open apps, adjust media volume, search the web, and open phone settings.", 15f, muted, false), params(bottom = 20))
+        page.addView(text("Enable hands-free once, then speak supported commands to launch apps, control visible buttons, enter text, navigate, and manage media.", 15f, muted, false), params(bottom = 20))
 
         val hero = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER; setPadding(dp(18), dp(22), dp(18), dp(22))
@@ -181,7 +181,7 @@ class MainActivity : Activity() {
             background = rounded(Color.rgb(241, 239, 255), 22)
         }
         accessCard.addView(text("One setup, then you're ready", 17f, ink, true), params(bottom = 6))
-        accessCard.addView(text("Android will ask for microphone and nearby Bluetooth permissions when needed. Bluetooth scanning and pairing are optional.", 13f, muted, false), params(bottom = 14))
+        accessCard.addView(text("Enable microphone access and Matty in Accessibility settings to let it operate visible controls in other apps. You stay in control of every command.", 13f, muted, false), params(bottom = 14))
         accessButton = Button(this).apply {
             text = "Allow microphone access"; isAllCaps = false; textSize = 14f; setTextColor(Color.WHITE)
             background = rounded(ink, 16); setOnClickListener { toggleHandsFree() }
@@ -256,7 +256,7 @@ class MainActivity : Activity() {
         }
         typeButton.visibility = View.GONE
 
-        page.addView(text("Try: open Bluetooth settings · open Wi-Fi settings · open WhatsApp · volume up · search for weather", 12f, muted, false), params(bottom = 6))
+        page.addView(text("Try: “Matty, open WhatsApp” · “Matty, tap Search” · “Matty, type hello” · “Matty, swipe left”", 12f, muted, false), params(bottom = 6))
         page.addView(text("PRIVACY FIRST · Commands are handled on your phone where possible. Offline speech depends on your Android speech service and downloaded language packs.", 11f, muted, false), params(top = 14))
         setContentView(scroll)
     }
