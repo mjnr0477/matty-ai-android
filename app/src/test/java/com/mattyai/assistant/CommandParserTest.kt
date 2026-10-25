@@ -22,7 +22,8 @@ class CommandParserTest {
     }
     @Test fun parsesTapByVisibleLabel() {
         assertEquals(ParsedMattyCommand(MattyCommandType.TAP_TEXT, "Wi-Fi"), CommandParser.parse("Matty tap Wi-Fi"))
-        assertEquals(ParsedMattyCommand(MattyCommandType.TAP_TEXT, "send"), CommandParser.parse("click Send"))
+        assertEquals(ParsedMattyCommand(MattyCommandType.TAP_TEXT, "Send"), CommandParser.parse("click Send"))
+        assertEquals(ParsedMattyCommand(MattyCommandType.TAP_TEXT, "Send"), CommandParser.parse("Matty tap the Send button"))
     }
     @Test fun parsesTextEntryLocally() {
         assertEquals(ParsedMattyCommand(MattyCommandType.TYPE_TEXT, "Hello There!"), CommandParser.parse("Matty type Hello There!"))
@@ -34,5 +35,6 @@ class CommandParserTest {
     }
     @Test fun unknownCommandsDoNotCreateArbitraryActions() {
         assertEquals(MattyCommandType.UNKNOWN, CommandParser.parse("transfer all my money").type)
+        assertEquals(MattyCommandType.UNKNOWN, CommandParser.parse("Matty do not open Wi-Fi").type)
     }
 }
