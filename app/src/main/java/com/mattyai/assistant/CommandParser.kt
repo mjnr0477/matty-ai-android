@@ -5,7 +5,7 @@ enum class MattyCommandType {
     OPEN_WIFI_SETTINGS, OPEN_MOBILE_DATA_SETTINGS, OPEN_BLUETOOTH_SETTINGS,
     OPEN_NETWORK_SETTINGS, OPEN_NOTIFICATIONS, OPEN_QUICK_SETTINGS,
     GO_BACK, GO_HOME, VOLUME_DOWN, VOLUME_UP, START_PLAYBACK,
-    OPEN_MUSIC, OPEN_APP, OPEN_APP_AND_CLICK_LINK, TAP_TEXT, CLICK_FIRST_LINK, TYPE_TEXT, SCROLL_UP, SCROLL_DOWN, UNKNOWN
+    OPEN_MUSIC, OPEN_APP, INSTALL_APP, SEARCH_WEB, OPEN_APP_AND_CLICK_LINK, TAP_TEXT, CLICK_FIRST_LINK, TYPE_TEXT, SCROLL_UP, SCROLL_DOWN, UNKNOWN
 }
 
 data class ParsedMattyCommand(val type: MattyCommandType, val argument: String = "")
@@ -32,6 +32,17 @@ object CommandParser {
             }
             command.contains("link") && (command.contains("click") || command.contains("open") || command.contains("follow")) ->
                 ParsedMattyCommand(MattyCommandType.CLICK_FIRST_LINK)
+            command.startsWith("install ") || command.startsWith("download and install ") -> {
+                val appName = original.replace(Regex("(?i)^(download and install|install)\\s+"), "").trim()
+                if (appName.isNotBlank()) ParsedMattyCommand(MattyCommandType.INSTALL_APP, appName)
+                else ParsedMattyCommand(MattyCommandType.UNKNOWN)
+            }
+            command.startsWith("search for ") || command.startsWith("search the web for ") ||
+                command.startsWith("google ") || command.startsWith("look up ") -> {
+                val query = original.replace(Regex("(?i)^(search the web for|search for|google|look up)\\s+"), "").trim()
+                if (query.isNotBlank()) ParsedMattyCommand(MattyCommandType.SEARCH_WEB, query)
+                else ParsedMattyCommand(MattyCommandType.UNKNOWN)
+            }
             command.startsWith("tap ") || command.startsWith("click ") ->
                 ParsedMattyCommand(
                     MattyCommandType.TAP_TEXT,
