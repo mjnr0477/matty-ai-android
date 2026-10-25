@@ -180,6 +180,8 @@ class MattyWakeService : Service() {
             MattyCommandType.TYPE_TEXT -> MattyAccessibilityService.typeIntoFocusedField(command.argument)
             MattyCommandType.SCROLL_UP -> MattyAccessibilityService.scroll(false)
             MattyCommandType.SCROLL_DOWN -> MattyAccessibilityService.scroll(true)
+            MattyCommandType.SWIPE_LEFT -> MattyAccessibilityService.swipeLeft()
+            MattyCommandType.SWIPE_RIGHT -> MattyAccessibilityService.swipeRight()
             MattyCommandType.GO_BACK -> MattyAccessibilityService.goBack()
             MattyCommandType.GO_HOME -> MattyAccessibilityService.goHome()
             MattyCommandType.OPEN_APP, MattyCommandType.OPEN_APP_AND_CLICK_LINK -> launchInstalledApp(command.argument)
