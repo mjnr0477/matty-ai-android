@@ -342,8 +342,18 @@ class MainActivity : Activity() {
 
     private fun continueAccessSetup() {
         getSharedPreferences("matty_settings", MODE_PRIVATE).edit().putBoolean("hands_free_enabled", true).apply()
-        status.text = "Starting hands-free. Keep Matty's ongoing notification enabled."
         refreshAccessState()
+        val consentAccepted = getSharedPreferences("matty_privacy", MODE_PRIVATE)
+            .getBoolean("cross_app_voice_control_disclosure_accepted", false)
+        if (!consentAccepted) {
+            status.text = "One-time setup: allow Matty to operate visible controls in other apps."
+            requestCrossAppVoiceControl()
+        } else if (!MattyAccessibilityService.isActive()) {
+            status.text = "Enable Matty in Android Accessibility settings to control other apps."
+            try { startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) } catch (_: Exception) { }
+        } else {
+            status.text = "Hands-free enabled. Say “Matty” and a command."
+        }
         ensureWakeService()
     }
 
@@ -405,6 +415,13 @@ class MainActivity : Activity() {
             .show()
     }
 
+    private fun selectedVoiceLocale(): Locale {
+        val tag = getSharedPreferences("matty_settings", MODE_PRIVATE)
+            .getString("voice_language", Locale.getDefault().toLanguageTag())
+            ?: Locale.getDefault().toLanguageTag()
+        return Locale.forLanguageTag(tag)
+    }
+
     private fun startListening() {
         if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             beginAccessSetup(); return
@@ -440,7 +457,7 @@ class MainActivity : Activity() {
         })
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE, selectedVoiceLocale().toLanguageTag())
             putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
             putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false)
         }
