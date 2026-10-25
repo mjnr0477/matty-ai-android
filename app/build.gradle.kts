@@ -56,5 +56,6 @@ android {
 }
 
 dependencies {
+    implementation("com.alphacephei:vosk-android:0.3.75")
     testImplementation("junit:junit:4.13.2")
 }
