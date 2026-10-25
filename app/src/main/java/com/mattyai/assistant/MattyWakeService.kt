@@ -26,6 +26,7 @@ class MattyWakeService : Service() {
     private var recognizer: SpeechRecognizer? = null
     private var listening = false
     private var wakeLock: PowerManager.WakeLock? = null
+    private var screenWakeLock: PowerManager.WakeLock? = null
     private val handler = Handler(Looper.getMainLooper())
     private val retryListening = Runnable { startWakeListening() }
 
@@ -72,6 +73,7 @@ class MattyWakeService : Service() {
                         ?.firstOrNull().orEmpty().lowercase(Locale.ROOT)
                     if (heard.matches(Regex(".*\\bmatty\\b.*"))) {
                         wakeTriggered = true
+                        wakeScreenBriefly()
                         val intent = Intent(this@MattyWakeService, MainActivity::class.java).apply {
                             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
                             putExtra(EXTRA_WAKE_WORD, true)
@@ -97,6 +99,18 @@ class MattyWakeService : Service() {
             listening = false
             stopSelf()
         }
+    }
+
+    @Suppress("DEPRECATION")
+    private fun wakeScreenBriefly() {
+        try {
+            val pm = getSystemService(POWER_SERVICE) as PowerManager
+            screenWakeLock = pm.newWakeLock(
+                PowerManager.SCREEN_BRIGHT_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP,
+                "MattyAI:WakeDisplay"
+            )
+            screenWakeLock?.acquire(5_000L)
+        } catch (_: Exception) { }
     }
 
     private fun createNotificationChannel() {
