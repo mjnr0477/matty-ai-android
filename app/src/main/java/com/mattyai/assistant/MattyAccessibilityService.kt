@@ -40,6 +40,32 @@ class MattyAccessibilityService : AccessibilityService() {
         }
     }
 
+    internal fun clickFirstLink(): Boolean {
+        val root = rootInActiveWindow ?: return false
+        return try {
+            val node = findLinkNode(root) ?: return false
+            performClickOnNodeOrParent(node)
+        } finally {
+            root.recycle()
+        }
+    }
+
+    private fun findLinkNode(node: AccessibilityNodeInfo): AccessibilityNodeInfo? {
+        val label = listOfNotNull(node.text?.toString(), node.contentDescription?.toString())
+            .joinToString(" ").trim()
+        val isLinkLabel = label.matches(Regex("(?i).*\\bhttps?://\\S+.*")) ||
+            label.matches(Regex("(?i).*\\bwww\\.\\S+.*")) ||
+            node.className?.toString()?.contains("link", ignoreCase = true) == true
+        if (isLinkLabel && (node.isClickable || node.parent?.isClickable == true)) return node
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i) ?: continue
+            val found = findLinkNode(child)
+            if (found != null) return found
+            child.recycle()
+        }
+        return null
+    }
+
     internal fun enterText(value: String): Boolean {
         val root = rootInActiveWindow ?: return false
         return try {
